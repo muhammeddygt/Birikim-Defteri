@@ -1237,6 +1237,7 @@ if(FIREBASE_CONFIGURED){
       btn.classList.toggle('active', btn.dataset.tab===currentTab);
     });
 
+    // Kullanıcı bir inputa yazıyorsa ekranı yenileme (klavye açık kalır)
     var activeEl = document.activeElement;
     if(!activeEl || activeEl.tagName !== 'INPUT'){
       var scrollY = window.scrollY;
