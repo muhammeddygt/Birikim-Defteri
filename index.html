@@ -1218,6 +1218,16 @@ if(FIREBASE_CONFIGURED){
   }
 
   function render(){
+    var activeEl = document.activeElement;
+    var activeDataAction = activeEl ? activeEl.dataset.action : null;
+    var activeDataList = activeEl ? activeEl.dataset.list : null;
+    var activeDataId = activeEl ? activeEl.dataset.id : null;
+    var activeDataMi = activeEl ? activeEl.dataset.mi : null;
+    var activeDataField = activeEl ? activeEl.dataset.field : null;
+    var activeDataI = activeEl ? activeEl.dataset.i : null;
+    var selectionStart = (activeEl && typeof activeEl.selectionStart === 'number') ? activeEl.selectionStart : null;
+    var selectionEnd = (activeEl && typeof activeEl.selectionEnd === 'number') ? activeEl.selectionEnd : null;
+
     var tabDef = TABS.filter(function(t){return t.id===currentTab;})[0] || TABS[0];
     document.getElementById('pageTitle').textContent = tabDef.label;
     document.getElementById('pageSub').textContent = MONTHS[currentMonth] + ' ' + MONTH_YEAR[currentMonth] + ' — ' + tabDef.sub;
@@ -1228,6 +1238,23 @@ if(FIREBASE_CONFIGURED){
 
     document.getElementById('tabpage').innerHTML = (RENDERERS[currentTab]||renderOzet)();
     wireOpenForms();
+
+    if(activeDataAction && activeEl){
+      var selector = 'input[data-action="' + activeDataAction + '"]';
+      if(activeDataList) selector += '[data-list="' + activeDataList + '"]';
+      if(activeDataId) selector += '[data-id="' + activeDataId + '"]';
+      if(activeDataMi !== null && activeDataMi !== undefined) selector += '[data-mi="' + activeDataMi + '"]';
+      if(activeDataField) selector += '[data-field="' + activeDataField + '"]';
+      if(activeDataI !== null && activeDataI !== undefined) selector += '[data-i="' + activeDataI + '"]';
+      
+      var newEl = document.querySelector(selector);
+      if(newEl){
+        newEl.focus();
+        if(selectionStart !== null && selectionEnd !== null && typeof newEl.setSelectionRange === 'function'){
+          try{ newEl.setSelectionRange(selectionStart, selectionEnd); }catch(err){}
+        }
+      }
+    }
   }
   function rerender(){ save(); render(); }
 
@@ -1240,6 +1267,7 @@ if(FIREBASE_CONFIGURED){
     if(action==='income'){
       STATE.salaryMonthly[MONTHS[currentMonth]].gelir = parseNum(val);
       save();
+      render();
       return;
     }
     if(action==='name'){
@@ -1251,13 +1279,13 @@ if(FIREBASE_CONFIGURED){
     if(action==='amt'){
       var list2 = findList(t.dataset.list);
       var item2 = list2.filter(function(x){return x.id===t.dataset.id;})[0];
-      if(item2){ item2.tutar = parseNum(val); save(); }
+      if(item2){ item2.tutar = parseNum(val); save(); render(); }
       return;
     }
     if(action==='fatura-amt'){
       var f6 = STATE.faturalar.filter(function(x){return x.id===t.dataset.id;})[0];
       var mi6 = parseInt(t.dataset.mi,10);
-      if(f6){ f6.monthlyAmounts[mi6] = parseNum(val); save(); }
+      if(f6){ f6.monthlyAmounts[mi6] = parseNum(val); save(); render(); }
       return;
     }
     if(action==='offbudget-name' || action==='offbudget-amt'){
@@ -1267,13 +1295,14 @@ if(FIREBASE_CONFIGURED){
       if(offItem){
         if(action==='offbudget-name') offItem.ad = val; else offItem.tutar = Math.max(0,parseNum(val));
         save();
+        if(action==='offbudget-amt') render();
       }
       return;
     }
     if(action==='principal'){
       var pl = findList(t.dataset.list);
       var pi = pl.filter(function(x){return x.id===t.dataset.id;})[0];
-      if(pi){ pi.baslangic = Math.max(0,parseNum(val)); save(); }
+      if(pi){ pi.baslangic = Math.max(0,parseNum(val)); save(); render(); }
       return;
     }
     if(action==='balance'){
@@ -1284,6 +1313,7 @@ if(FIREBASE_CONFIGURED){
         bi.balanceOverrides = bi.balanceOverrides || {};
         if(String(val).trim()==='') delete bi.balanceOverrides[bmi]; else bi.balanceOverrides[bmi] = Math.max(0,parseNum(val));
         save();
+        render();
       }
       return;
     }
@@ -1294,23 +1324,26 @@ if(FIREBASE_CONFIGURED){
       if(pi2){
         if(String(val).trim()==='') delete pi2.payments[pmi]; else pi2.payments[pmi] = parseNum(val);
         save();
+        render();
       }
       return;
     }
     if(action==='kk-rate'){
       var kl = findList(t.dataset.list);
       var ki = kl.filter(function(x){return x.id===t.dataset.id;})[0];
-      if(ki){ ki[t.dataset.field] = Math.max(0,parseNum(val)); save(); }
+      if(ki){ ki[t.dataset.field] = Math.max(0,parseNum(val)); save(); render(); }
       return;
     }
     if(action==='gold-price'){
       STATE.gold[t.dataset.field] = Math.max(0,parseNum(val));
       save();
+      render();
       return;
     }
     if(action==='borsa-oran'){
       STATE.borsaOran[parseInt(t.dataset.i,10)] = parseNum(val);
       save();
+      render();
       return;
     }
   }
@@ -1518,7 +1551,7 @@ if(FIREBASE_CONFIGURED){
       hideAuthError();
       var email = document.getElementById('authEmail').value.trim();
       var pass = document.getElementById('authPassword').value;
-      if(!email || !pass){ showAuthError('Lütfen e-posta ve şifrenizi girer misiniz?'); return; }
+      if(!email || !pass){ showAuthError('Lütfen e-posta ve şifrenizi girin.'); return; }
       if(authMode==='signup' && pass.length < 6){ showAuthError('Şifre en az 6 karakter olmalı.'); return; }
       document.getElementById('authFormArea').style.display = 'none';
       document.getElementById('authLoading').style.display = 'block';
@@ -1530,7 +1563,7 @@ if(FIREBASE_CONFIGURED){
       });
     });
     document.getElementById('authForgotBtn').addEventListener('click', function(){
-      var email = document.getElementById('authEmail').value.trim();
+      var email = document.getElementById('authEmail'].value.trim();
       if(!email){ showAuthError('Şifre sıfırlama için önce e-posta adresinizi girin.'); return; }
       fbAuth.sendPasswordResetEmail(email).then(function(){
         showAuthError('Şifre sıfırlama bağlantısı e-postanıza gönderildi.', true);
