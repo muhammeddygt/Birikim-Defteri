@@ -339,7 +339,6 @@ input{font-family:inherit;}
 
 <div class="app" id="app" style="display:none;">
 
-
   <div class="sidebar" id="sidebar" style="display:none;">
     <h1>Birikim Defteri</h1>
     <div class="sub">12 Aylık Bütçe Planı</div>
@@ -360,7 +359,6 @@ input{font-family:inherit;}
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
-// ====== FIREBASE YAPILANDIRMASI — kendi Firebase projenizin bilgileriyle doldurun ======
 var firebaseConfig = {
   apiKey: "AIzaSyCtLdK_d2A1pyF7R2yXL3kMW5B5bhqgLGs",
   authDomain: "birikim-defteri-97b65.firebaseapp.com",
@@ -928,7 +926,8 @@ if(FIREBASE_CONFIGURED){
       chips += '<button type="button" class="cal-chip'+(i===currentMonth?' active':'')+'" data-action="jump-month" data-mi="'+i+'">'+
         '<span class="cal-m">'+MONTHS[i].slice(0,3)+'</span><span class="cal-v">'+fmtShort(bal)+'</span></button>';
     }
-    return '<div class="cal-strip">'+chips+'</div>';
+    return '<div class="section-title">Ay Seçimi <small style="text-transform:none;font-weight:600;">(aya dokunarak atlayın)</small></div>'+
+           '<div class="cal-strip">'+chips+'</div>';
   }
 
   function renderOzet(){
@@ -936,7 +935,6 @@ if(FIREBASE_CONFIGURED){
     var heroClass = mt.netKalan < 0 ? 'warn' : '';
     var html = '';
     
-    html += '<div class="section-title">Ay Seçimi <small style="text-transform:none;font-weight:600;">(aya dokunarak atlayın)</small></div>';
     html += debtCalendarHtml();
 
     html += '<div class="hero-card '+heroClass+'">'+
@@ -982,7 +980,6 @@ if(FIREBASE_CONFIGURED){
     var minPay = monthTotals(mi).borcOdemeToplam;
     var html = '';
     
-    html += '<div class="section-title">Ay Seçimi <small style="text-transform:none;font-weight:600;">(aya dokunarak atlayın)</small></div>';
     html += debtCalendarHtml();
 
     html += '<div class="stat-grid" style="grid-template-columns:1fr 1fr;">'+
@@ -1032,7 +1029,6 @@ if(FIREBASE_CONFIGURED){
     var mt = monthTotals(mi);
     var html = '';
     
-    html += '<div class="section-title">Ay Seçimi <small style="text-transform:none;font-weight:600;">(aya dokunarak atlayın)</small></div>';
     html += debtCalendarHtml();
 
     html += '<div class="stat-grid" style="grid-template-columns:1fr 1fr;">'+
@@ -1085,7 +1081,6 @@ if(FIREBASE_CONFIGURED){
     var borsa = borsaSeries();
     var html = '';
     
-    html += '<div class="section-title">Ay Seçimi <small style="text-transform:none;font-weight:600;">(aya dokunarak atlayın)</small></div>';
     html += debtCalendarHtml();
 
     html += '<div class="section-title">Altın<span class="amt">'+fmt(gt.toplam)+'</span></div>';
@@ -1128,7 +1123,6 @@ if(FIREBASE_CONFIGURED){
     var netVarlik = netBirikim - borcNow;
     var html = '';
     
-    html += '<div class="section-title">Ay Seçimi <small style="text-transform:none;font-weight:600;">(aya dokunarak atlayın)</small></div>';
     html += debtCalendarHtml();
 
     html += '<div class="hero-card '+(netVarlik>=0?'':'warn')+'">'+
@@ -1269,7 +1263,7 @@ if(FIREBASE_CONFIGURED){
   function render(){
     var tabDef = TABS.filter(function(t){return t.id===currentTab;})[0] || TABS[0];
     document.getElementById('pageTitle').textContent = tabDef.label;
-    document.getElementById('pageSub').textContent = MONTHS[currentMonth] + ' ' + MONTH_YEAR[currentMonth] + ' - ' + tabDef.sub;
+    document.getElementById('pageSub').textContent = MONTHS[currentMonth] + ' ' + MONTH_YEAR[currentMonth] + ' — ' + tabDef.sub;
 
     Array.prototype.forEach.call(document.querySelectorAll('.tabbtn'), function(btn){
       btn.classList.toggle('active', btn.dataset.tab===currentTab);
@@ -1554,7 +1548,7 @@ if(FIREBASE_CONFIGURED){
       'auth/too-many-requests':'Çok fazla deneme yapıldı, lütfen biraz bekleyin.',
       'auth/network-request-failed':'İnternet bağlantısı sorunu.'
     };
-    return (err && map[err.code]) yat || ('Bir hata oluştu: ' + ((err && err.message) || 'bilinmeyen hata'));
+    return (err && map[err.code]) || ('Bir hata oluştu: ' + ((err && err.message) || 'bilinmeyen hata'));
   }
 
   if(FIREBASE_CONFIGURED && fbAuth && fbDb){
