@@ -1059,7 +1059,7 @@ if(FIREBASE_CONFIGURED){
       var note = transferred ? '<div class="transfer-note">'+fmtShort(transferred.amount)+' → '+MONTHS[transferred.targetMonth]+' / '+(STATE.debts.filter(function(c){return c.id===transferred.cardId;})[0]||{}).ad+' <button class="mini-link-btn" data-action="undo-bill-transfer" data-id="'+f.id+'" data-mi="'+mi+'">geri al</button></div>' : '';
       return '<div class="field-inline" style="flex-wrap:wrap;">'+
         '<input class="name-box" data-list="faturalar" data-id="'+f.id+'" data-action="name" value="'+esc(f.ad)+'">'+
-        '<input class="num-box" data-list="faturalar" data-id="'+f.id+'" data-mi="'+mi+'" data-action="fatura-amt" type="text" inputmode="decimal" value="'+editVal(amt)+'"'+(transferred?' disabled':'')+'>'+
+        '<input class="num-box" data-list="faturalar" data-id="'+f.id+'" data-id="'+f.id+'" data-mi="'+mi+'" data-action="fatura-amt" type="text" inputmode="decimal" value="'+editVal(amt)+'"'+(transferred?' disabled':'')+'>'+
         '<button class="icon-btn danger" data-list="faturalar" data-id="'+f.id+'" data-action="del">✕</button>'+
         '<div style="width:100%;">'+kkPicker+note+'</div>'+
       '</div>';
@@ -1244,7 +1244,7 @@ if(FIREBASE_CONFIGURED){
   }
   function rerender(){ save(); render(); }
 
-  function onChange(e){
+  function handleInputEvent(e){
     var t = e.target;
     var action = t.dataset.action;
     if(!action) return;
@@ -1338,6 +1338,12 @@ if(FIREBASE_CONFIGURED){
       }
       return;
     }
+  }
+
+  function onChange(e){
+    var t = e.target;
+    var action = t.dataset.action;
+    if(!action) return;
     if(action==='fatura-to-kk'){
       var cardId = t.value;
       if(!cardId) return;
@@ -1478,6 +1484,7 @@ if(FIREBASE_CONFIGURED){
     }
   }
 
+  document.getElementById('app').addEventListener('input', handleInputEvent);
   document.getElementById('app').addEventListener('change', onChange);
   document.getElementById('app').addEventListener('click', onClick);
   window.addEventListener('resize', function(){ if(document.getElementById('app').style.display !== 'none'){ buildShell(); render(); } });
