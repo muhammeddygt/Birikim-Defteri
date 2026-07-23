@@ -1237,13 +1237,10 @@ if(FIREBASE_CONFIGURED){
       btn.classList.toggle('active', btn.dataset.tab===currentTab);
     });
 
-    var activeEl = document.activeElement;
-    if(!activeEl || activeEl.tagName !== 'INPUT'){
-      var scrollY = window.scrollY;
-      document.getElementById('tabpage').innerHTML = (RENDERERS[currentTab]||renderOzet)();
-      wireOpenForms();
-      window.scrollTo(0, scrollY);
-    }
+    var scrollY = window.scrollY;
+    document.getElementById('tabpage').innerHTML = (RENDERERS[currentTab]||renderOzet)();
+    wireOpenForms();
+    window.scrollTo(0, scrollY);
   }
   function rerender(){ save(); render(); }
 
