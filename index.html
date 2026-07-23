@@ -155,7 +155,6 @@ input{font-family:inherit;}
   padding:14px 15px; margin-bottom:10px; box-shadow:var(--shadow);
 }
 .debt-card.paid{border-color:var(--green); background:var(--green-soft);}
-.debt-card.missed{border-color:var(--red); background:var(--red-soft);}
 .debt-card .dtop{display:flex; align-items:center; gap:8px; margin-bottom:4px; flex-wrap:wrap;}
 .debt-card .dname{font-size:15px; font-weight:800; flex:1 1 100px; min-width:80px; border:none; background:transparent; padding:0; color:var(--ink);}
 .badge{
@@ -171,7 +170,6 @@ input{font-family:inherit;}
   font-size:11px; font-weight:800; color:#fff; cursor:pointer; padding:0;
 }
 .status-btn.paid.on{background:var(--green); border-color:var(--green);}
-.status-btn.missed.on{background:var(--red); border-color:var(--red);}
 .debt-fields{display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;}
 .debt-fields .fw{flex:1; min-width:100px;}
 .debt-fields label{display:block; font-size:10px; color:var(--ink-faint); font-weight:700; margin-bottom:3px; text-transform:uppercase;}
@@ -327,7 +325,7 @@ if(FIREBASE_CONFIGURED){
   "use strict";
   var MONTHS = ['Ağustos','Eylül','Ekim','Kasım','Aralık','Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz'];
   var MONTH_YEAR = {0:2026, 1:2026, 2:2026, 3:2026, 4:2026, 5:2027, 6:2027, 7:2027, 8:2027, 9:2027, 10:2027, 11:2027};
-  var STORAGE_KEY = 'birikimDefteri_v10';
+  var STORAGE_KEY = 'birikimDefteri_v11';
   var TABS = [
     {id:'ozet', label:'Özet', icon:'🏠', sub:'Bu ayki finansal durumunuz'},
     {id:'borclar', label:'Borçlar', icon:'💳', sub:'Kredi, kredi kartı ve ek borçlar'},
@@ -697,7 +695,7 @@ if(FIREBASE_CONFIGURED){
     document.getElementById('sidebarTabs').innerHTML = tHtml;
   }
 
-  // --- KESİN VE KARARLI VERİ İŞLEME ---
+  // Güvenli ve anlık girdi işleme (Orijinal Kararlı Sistem)
   document.addEventListener('input', function(e){
     var act = e.target.dataset.action;
     var val = e.target.value;
@@ -753,14 +751,7 @@ if(FIREBASE_CONFIGURED){
     save();
   });
 
-  // Odaktan çıkıldığında (klavye kapandığında) ekran güncellenir
-  document.addEventListener('blur', function(e){
-    if(e.target && e.target.dataset && e.target.dataset.action){
-      render();
-    }
-  }, true);
-
-  // Tıklama, sekme değişimi, ay atlama ve buton işlemleri
+  // Tıklama, sekme değişimi, ay atlama ve buton işlemleri (Anında Tepki)
   document.addEventListener('click', function(e){
     var tabBtn = e.target.closest('.tabbtn');
     if(tabBtn){ currentTab = tabBtn.dataset.tab; render(); return; }
