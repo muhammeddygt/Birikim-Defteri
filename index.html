@@ -1488,8 +1488,14 @@ if(FIREBASE_CONFIGURED){
     }
   }
 
+  // Sadece blur (odaktan çıkma) anında veya tıklamalarda arayüzün senkronize olması sağlanarak klavye ve akış korundu
   document.getElementById('app').addEventListener('input', handleInputEvent);
   document.getElementById('app').addEventListener('change', onChange);
+  document.getElementById('app').addEventListener('blur', function(e){
+    if(e.target && e.target.classList && (e.target.classList.contains('num-box') || e.target.classList.contains('name-box'))){
+      render();
+    }
+  }, true);
   document.getElementById('app').addEventListener('click', onClick);
   window.addEventListener('resize', function(){ if(document.getElementById('app').style.display !== 'none'){ buildShell(); render(); } });
 
