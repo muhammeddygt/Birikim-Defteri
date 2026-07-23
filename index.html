@@ -1190,7 +1190,7 @@ if(FIREBASE_CONFIGURED){
 
     html += '<div class="section-title">Veri Yönetimi</div>';
     html += '<div class="backup-row">'+
-      '<button class="btn ghost" data-action="export-data">⇩ Yedek Al (.json)</button>'+
+      '<button class="btn ghost" data-export-btn>⇩ Yedek Al (.json)</button>'+
       '<label class="btn ghost">⇧ Yedekten Geri Yükle<input type="file" accept="application/json,.json" data-action="import-file" style="display:none;"></label>'+
     '</div>';
 
@@ -1353,6 +1353,17 @@ if(FIREBASE_CONFIGURED){
   }
 
   function onClick(e){
+    var exportBtn = e.target.closest ? e.target.closest('[data-export-btn]') : null;
+    if(exportBtn){
+      var blob = new Blob([JSON.stringify(STATE,null,2)], {type:'application/json'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'birikim-defteri-yedek-'+(new Date().toISOString().slice(0,10))+'.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){URL.revokeObjectURL(url);},1000);
+      return;
+    }
+
     var t = e.target.closest ? e.target.closest('[data-action]') : null;
     if(!t) return;
     var action = t.dataset.action;
@@ -1434,15 +1445,6 @@ if(FIREBASE_CONFIGURED){
       if(fbAuth) fbAuth.signOut();
       return;
     }
-    if(action==='export-data'){
-      var blob = new Blob([JSON.stringify(STATE,null,2)], {type:'application/json'});
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url; a.download = 'birikim-defteri-yedek-'+(new Date().toISOString().slice(0,10))+'.json';
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      setTimeout(function(){URL.revokeObjectURL(url);},1000);
-      return;
-    }
     if(action==='open-add-debt'){
       pendingDebtForm = {ad:'', tur:'kredi_karti', startMonth:currentMonth, baslangic:'', asgari:'20', faiz:'5', kmhFaiz:'5', taksit:''};
       render();
@@ -1500,7 +1502,7 @@ if(FIREBASE_CONFIGURED){
       'auth/user-not-found':'Bu e-posta ile kayıtlı bir hesap bulunamadı.',
       'auth/wrong-password':'Şifre yanlış.',
       'auth/invalid-credential':'E-posta veya şifre yanlış.',
-      'auth/weak-password':'Şifre çok zayıf, en sil 6 karakter olmalı.',
+      'auth/weak-password':'Şifre çok zayıf, en az 6 karakter olmalı.',
       'auth/too-many-requests':'Çok fazla deneme yapıldı, lütfen biraz bekleyin.',
       'auth/network-request-failed':'İnternet bağlantısı sorunu.'
     };
@@ -1516,7 +1518,7 @@ if(FIREBASE_CONFIGURED){
       hideAuthError();
       var email = document.getElementById('authEmail').value.trim();
       var pass = document.getElementById('authPassword').value;
-      if(!email || !pass){ showAuthError('Lütfen e-posta ve şifrenizi girin.'); return; }
+      if(!email || !pass){ showAuthError('Lütfen e-posta ve şifrenizi girer misiniz?'); return; }
       if(authMode==='signup' && pass.length < 6){ showAuthError('Şifre en az 6 karakter olmalı.'); return; }
       document.getElementById('authFormArea').style.display = 'none';
       document.getElementById('authLoading').style.display = 'block';
@@ -1539,7 +1541,6 @@ if(FIREBASE_CONFIGURED){
       if(user){
         document.getElementById('authFormArea').style.display = 'none';
         document.getElementById('authLoading').style.display = 'block';
-        loadStateFromCloud(user.uid).showApp = showApp;
         loadStateFromCloud(user.uid).then(showApp);
       } else {
         showAuthScreen();
