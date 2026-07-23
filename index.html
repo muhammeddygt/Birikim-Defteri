@@ -1059,7 +1059,7 @@ if(FIREBASE_CONFIGURED){
       var note = transferred ? '<div class="transfer-note">'+fmtShort(transferred.amount)+' → '+MONTHS[transferred.targetMonth]+' / '+(STATE.debts.filter(function(c){return c.id===transferred.cardId;})[0]||{}).ad+' <button class="mini-link-btn" data-action="undo-bill-transfer" data-id="'+f.id+'" data-mi="'+mi+'">geri al</button></div>' : '';
       return '<div class="field-inline" style="flex-wrap:wrap;">'+
         '<input class="name-box" data-list="faturalar" data-id="'+f.id+'" data-action="name" value="'+esc(f.ad)+'">'+
-        '<input class="num-box" data-list="faturalar" data-id="'+f.id+'" data-id="'+f.id+'" data-mi="'+mi+'" data-action="fatura-amt" type="text" inputmode="decimal" value="'+editVal(amt)+'"'+(transferred?' disabled':'')+'>'+
+        '<input class="num-box" data-list="faturalar" data-id="'+f.id+'" data-mi="'+mi+'" data-action="fatura-amt" type="text" inputmode="decimal" value="'+editVal(amt)+'"'+(transferred?' disabled':'')+'>'+
         '<button class="icon-btn danger" data-list="faturalar" data-id="'+f.id+'" data-action="del">✕</button>'+
         '<div style="width:100%;">'+kkPicker+note+'</div>'+
       '</div>';
@@ -1237,10 +1237,13 @@ if(FIREBASE_CONFIGURED){
       btn.classList.toggle('active', btn.dataset.tab===currentTab);
     });
 
-    var scrollY = window.scrollY;
-    document.getElementById('tabpage').innerHTML = (RENDERERS[currentTab]||renderOzet)();
-    wireOpenForms();
-    window.scrollTo(0, scrollY);
+    var activeEl = document.activeElement;
+    if(!activeEl || activeEl.tagName !== 'INPUT'){
+      var scrollY = window.scrollY;
+      document.getElementById('tabpage').innerHTML = (RENDERERS[currentTab]||renderOzet)();
+      wireOpenForms();
+      window.scrollTo(0, scrollY);
+    }
   }
   function rerender(){ save(); render(); }
 
@@ -1338,6 +1341,7 @@ if(FIREBASE_CONFIGURED){
       }
       return;
     }
+    save();
   }
 
   function onChange(e){
