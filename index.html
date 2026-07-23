@@ -328,7 +328,7 @@ if(FIREBASE_CONFIGURED){
   "use strict";
   var MONTHS = ['Ağustos','Eylül','Ekim','Kasım','Aralık','Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz'];
   var MONTH_YEAR = {0:2026, 1:2026, 2:2026, 3:2026, 4:2026, 5:2027, 6:2027, 7:2027, 8:2027, 9:2027, 10:2027, 11:2027};
-  var STORAGE_KEY = 'birikimDefteri_v5';
+  var STORAGE_KEY = 'birikimDefteri_v6';
   var TABS = [
     {id:'ozet', label:'Özet', icon:'🏠', sub:'Bu ayki finansal durumunuz'},
     {id:'borclar', label:'Borçlar', icon:'💳', sub:'Kredi ve kredi kartları'},
@@ -336,7 +336,6 @@ if(FIREBASE_CONFIGURED){
     {id:'birikim', label:'Birikim', icon:'📈', sub:'Altın ve varlık takibi'},
     {id:'genel', label:'Genel', icon:'📊', sub:'Net varlık tablosu'}
   ];
-  var GROUP_ORDER = ['kredi_karti','kmh','kredi','manuel'];
 
   var uidCounter = 1;
   function uid(){ return 'id' + (uidCounter++) + '_' + Math.random().toString(36).slice(2,7); }
@@ -588,7 +587,7 @@ if(FIREBASE_CONFIGURED){
     document.getElementById('sidebarTabs').innerHTML = tHtml;
   }
 
-  // --- KRİTİK ÇÖZÜM: YAZARKEN EKRANI ASLA YENİDEN OLUŞTURMA (KLAVYE KAPANMAZ) ---
+  // --- KRİTİK ÇÖZÜM: YAZARKEN EKRAN KESİNLİKLE YENİLENMEZ, KLAVYE KAPANMAZ ---
   document.addEventListener('input', function(e){
     var act = e.target.dataset.action;
     var val = e.target.value;
@@ -614,10 +613,17 @@ if(FIREBASE_CONFIGURED){
     } else if(act==='gold-price'){
       STATE.gold[e.target.dataset.field] = parseNum(val);
     }
-    save(); // Klavye açıkken sadece hafızaya ve buluta kaydeder, ekranı yenilemez!
+    save(); // Sadece arkada kaydeder, ekranı yenilemediği için klavye açık kalır
   });
 
-  // Tıklama gerektiren işlemler ekranı günceller
+  // Odaktan çıkıldığı anda (blur) ekran güncellenip hesaplamalar yansıtılır
+  document.addEventListener('blur', function(e){
+    if(e.target && e.target.dataset && e.target.dataset.action){
+      render();
+    }
+  }, true);
+
+  // Tıklama gerektiren işlemler (sekme değiştirme, ay atlama vs.) ekranı günceller
   document.addEventListener('click', function(e){
     var tabBtn = e.target.closest('.tabbtn');
     if(tabBtn){ currentTab = tabBtn.dataset.tab; render(); return; }
