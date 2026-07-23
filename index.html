@@ -1500,7 +1500,7 @@ if(FIREBASE_CONFIGURED){
       'auth/user-not-found':'Bu e-posta ile kayıtlı bir hesap bulunamadı.',
       'auth/wrong-password':'Şifre yanlış.',
       'auth/invalid-credential':'E-posta veya şifre yanlış.',
-      'auth/weak-password':'Şifre çok zayıf, en az 6 karakter olmalı.',
+      'auth/weak-password':'Şifre çok zayıf, en sil 6 karakter olmalı.',
       'auth/too-many-requests':'Çok fazla deneme yapıldı, lütfen biraz bekleyin.',
       'auth/network-request-failed':'İnternet bağlantısı sorunu.'
     };
@@ -1539,6 +1539,7 @@ if(FIREBASE_CONFIGURED){
       if(user){
         document.getElementById('authFormArea').style.display = 'none';
         document.getElementById('authLoading').style.display = 'block';
+        loadStateFromCloud(user.uid).showApp = showApp;
         loadStateFromCloud(user.uid).then(showApp);
       } else {
         showAuthScreen();
