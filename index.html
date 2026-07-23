@@ -1225,49 +1225,6 @@ if(FIREBASE_CONFIGURED){
     });
   }
 
-  function captureFocusState(){
-    var el = document.activeElement;
-    var page = document.getElementById('tabpage');
-    if(!el || !page.contains(el)) return null;
-    var tag = el.tagName;
-    if(tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') return null;
-    if(el.dataset && el.dataset.action){
-      return {
-        mode:'action', action: el.dataset.action, id: el.dataset.id || null,
-        mi: (el.dataset.mi !== undefined) ? el.dataset.mi : null,
-        field: el.dataset.field || null,
-        selStart: (typeof el.selectionStart === 'number') ? el.selectionStart : null,
-        selEnd: (typeof el.selectionEnd === 'number') ? el.selectionEnd : null
-      };
-    }
-    if(el.id){
-      return {
-        mode:'id', elId: el.id,
-        selStart: (typeof el.selectionStart === 'number') ? el.selectionStart : null,
-        selEnd: (typeof el.selectionEnd === 'number') ? el.selectionEnd : null
-      };
-    }
-    return null;
-  }
-  function restoreFocusState(state){
-    if(!state) return;
-    var el;
-    if(state.mode === 'id'){
-      el = document.getElementById(state.elId);
-    } else {
-      var sel = '[data-action="'+state.action+'"]';
-      if(state.id) sel += '[data-id="'+state.id+'"]';
-      if(state.mi !== null) sel += '[data-mi="'+state.mi+'"]';
-      if(state.field) sel += '[data-field="'+state.field+'"]';
-      el = document.getElementById('tabpage').querySelector(sel);
-    }
-    if(!el) return;
-    el.focus();
-    if(state.selStart !== null && typeof el.setSelectionRange === 'function'){
-      try{ el.setSelectionRange(state.selStart, state.selEnd); }catch(err){}
-    }
-  }
-
   function render(){
     var tabDef = TABS.filter(function(t){return t.id===currentTab;})[0] || TABS[0];
     document.getElementById('pageTitle').textContent = tabDef.label;
@@ -1281,23 +1238,20 @@ if(FIREBASE_CONFIGURED){
     });
 
     var scrollY = window.scrollY;
-    var focusState = captureFocusState();
     document.getElementById('tabpage').innerHTML = (RENDERERS[currentTab]||renderOzet)();
     wireOpenForms();
     window.scrollTo(0, scrollY);
-    restoreFocusState(focusState);
   }
   function rerender(){ save(); render(); }
 
-  function onInput(e){
+  function onChange(e){
     var t = e.target;
     var action = t.dataset.action;
     if(!action) return;
     var blank = String(t.value).trim()==='';
 
     if(action==='income'){
-      if(blank) return;
-      STATE.salaryMonthly[MONTHS[currentMonth]].gelir = parseNum(t.value);
+      if(!blank) STATE.salaryMonthly[MONTHS[currentMonth]].gelir = parseNum(t.value);
       save(); return;
     }
     if(action==='name'){
@@ -1307,35 +1261,38 @@ if(FIREBASE_CONFIGURED){
       return;
     }
     if(action==='amt'){
-      if(blank) return;
-      var list2 = findList(t.dataset.list);
-      var item2 = list2.filter(function(x){return x.id===t.dataset.id;})[0];
-      if(item2){ item2.tutar = parseNum(t.value); save(); }
+      if(!blank){
+        var list2 = findList(t.dataset.list);
+        var item2 = list2.filter(function(x){return x.id===t.dataset.id;})[0];
+        if(item2){ item2.tutar = parseNum(t.value); save(); }
+      }
       return;
     }
     if(action==='fatura-amt'){
-      if(blank) return;
-      var f6 = STATE.faturalar.filter(function(x){return x.id===t.dataset.id;})[0];
-      var mi6 = parseInt(t.dataset.mi,10);
-      if(f6){ f6.monthlyAmounts[mi6] = parseNum(t.value); save(); }
+      if(!blank){
+        var f6 = STATE.faturalar.filter(function(x){return x.id===t.dataset.id;})[0];
+        var mi6 = parseInt(t.dataset.mi,10);
+        if(f6){ f6.monthlyAmounts[mi6] = parseNum(t.value); save(); }
+      }
       return;
     }
     if(action==='offbudget-name' || action==='offbudget-amt'){
-      if(action==='offbudget-amt' && blank) return;
       var mi7 = parseInt(t.dataset.mi,10);
       var offList = STATE.offBudgetExpenses[mi7]||[];
       var offItem = offList.filter(function(x){return x.id===t.dataset.id;})[0];
       if(offItem){
-        if(action==='offbudget-name') offItem.ad = t.value; else offItem.tutar = Math.max(0,parseNum(t.value));
+        if(action==='offbudget-name') offItem.ad = t.value; 
+        else if(!blank) offItem.tutar = Math.max(0,parseNum(t.value));
         save();
       }
       return;
     }
     if(action==='principal'){
-      if(blank) return;
-      var pl = findList(t.dataset.list);
-      var pi = pl.filter(function(x){return x.id===t.dataset.id;})[0];
-      if(pi){ pi.baslangic = Math.max(0,parseNum(t.value)); save(); }
+      if(!blank){
+        var pl = findList(t.dataset.list);
+        var pi = pl.filter(function(x){return x.id===t.dataset.id;})[0];
+        if(pi){ pi.baslangic = Math.max(0,parseNum(t.value)); save(); }
+      }
       return;
     }
     if(action==='balance'){
@@ -1360,29 +1317,27 @@ if(FIREBASE_CONFIGURED){
       return;
     }
     if(action==='kk-rate'){
-      if(blank) return;
-      var kl = findList(t.dataset.list);
-      var ki = kl.filter(function(x){return x.id===t.dataset.id;})[0];
-      if(ki){ ki[t.dataset.field] = Math.max(0,parseNum(t.value)); save(); }
+      if(!blank){
+        var kl = findList(t.dataset.list);
+        var ki = kl.filter(function(x){return x.id===t.dataset.id;})[0];
+        if(ki){ ki[t.dataset.field] = Math.max(0,parseNum(t.value)); save(); }
+      }
       return;
     }
     if(action==='gold-price'){
-      if(blank) return;
-      STATE.gold[t.dataset.field] = Math.max(0,parseNum(t.value));
-      save(); return;
+      if(!blank){
+        STATE.gold[t.dataset.field] = Math.max(0,parseNum(t.value));
+        save();
+      }
+      return;
     }
     if(action==='borsa-oran'){
-      if(blank) return;
-      STATE.borsaOran[parseInt(t.dataset.i,10)] = parseNum(t.value);
-      save(); return;
+      if(!blank){
+        STATE.borsaOran[parseInt(t.dataset.i,10)] = parseNum(t.value);
+        save();
+      }
+      return;
     }
-  }
-
-  function onChange(e){
-    var t = e.target;
-    var action = t.dataset.action;
-    if(!action) return;
-
     if(action==='fatura-to-kk'){
       var cardId = t.value;
       if(!cardId) return;
@@ -1413,9 +1368,6 @@ if(FIREBASE_CONFIGURED){
       reader.readAsText(file);
       t.value=''; return;
     }
-    
-    // Diğer tüm input değişimleri için odak kaybını önlemek adına sadece kaydetme tetiklenebilir
-    save();
   }
 
   function onClick(e){
@@ -1526,7 +1478,6 @@ if(FIREBASE_CONFIGURED){
     }
   }
 
-  document.getElementById('app').addEventListener('input', onInput);
   document.getElementById('app').addEventListener('change', onChange);
   document.getElementById('app').addEventListener('click', onClick);
   window.addEventListener('resize', function(){ if(document.getElementById('app').style.display !== 'none'){ buildShell(); render(); } });
