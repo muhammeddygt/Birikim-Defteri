@@ -401,7 +401,7 @@ if(FIREBASE_CONFIGURED){
 (function(){
   "use strict";
   var MONTHS = ['Ağustos','Eylül','Ekim','Kasım','Aralık','Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz'];
-  var MONTH_YEAR = {0:2026,1:2026,2:2026,3:2026,4:2026,5:2027,6:2027,7:2027,8:2027,9:2027,10:2027,11:2027};
+  var MONTH_YEAR = {0:2026, 1:2026, 2:2026, 3:2026, 4:2026, 5:2027, 6:2027, 7:2027, 8:2027, 9:2027, 10:2027, 11:2027};
   var STORAGE_KEY = 'birikimDefteri_v3';
   var TABS = [
     {id:'ozet', label:'Özet', icon:'🏠', sub:'Bu ayki finansal durumunuz'},
@@ -848,7 +848,7 @@ if(FIREBASE_CONFIGURED){
 
   function addDebtFormHtml(){
     var f = pendingDebtForm;
-    var monthOptions = MONTHS.map(function(m,i){return '<option value="'+i+'"'+(i===f.startMonth?' selected':'')+'>'+m+'</option>';}).join('');
+    var monthOptions = MONTHS.map(function(m,i){return '<option value="'+i+'"'+(i===f.startMonth?' selected':'')+'>'+m+' '+MONTH_YEAR[i]+'</option>';}).join('');
     var turOptions = ['kredi_karti','kmh','kredi','manuel'].map(function(v){
       var labels = {kredi_karti:'Kredi Kartı (asgari %)', kmh:'KMH (Kredili Mevduat Hesabı)', kredi:'Kredi (sabit taksit)', manuel:'Manuel (elle gireceğim)'};
       return '<option value="'+v+'"'+(v===f.tur?' selected':'')+'>'+labels[v]+'</option>';
@@ -869,7 +869,7 @@ if(FIREBASE_CONFIGURED){
   }
   function addGoldFormHtml(){
     var f = pendingGoldForm;
-    var monthOptions = MONTHS.map(function(m,i){return '<option value="'+i+'"'+(i===f.ay?' selected':'')+'>'+m+'</option>';}).join('');
+    var monthOptions = MONTHS.map(function(m,i){return '<option value="'+i+'"'+(i===f.ay?' selected':'')+'>'+m+' '+MONTH_YEAR[i]+'</option>';}).join('');
     return '<div class="form-box">'+
       '<select id="ngAyar"><option value="ayar24"'+(f.ayar==='ayar24'?' selected':'')+'>24 Ayar</option><option value="ayar22"'+(f.ayar==='ayar22'?' selected':'')+'>22 Ayar</option></select>'+
       '<input class="num-box" id="ngGram" style="width:100%;" placeholder="Gram" type="text" inputmode="decimal" value="'+esc(f.gram)+'">'+
@@ -954,7 +954,7 @@ if(FIREBASE_CONFIGURED){
 
     var ana = anaBorcStats(currentMonth);
     var toplamBorcSimdi = currentDebtBalance(currentMonth);
-    html += '<div class="section-title">Ana Borç Durumu <small style="text-transform:none;font-weight:600;">('+MONTHS[currentMonth]+')</small></div>';
+    html += '<div class="section-title">Ana Borç Durumu <small style="text-transform:none;font-weight:600;">('+MONTHS[currentMonth]+' '+MONTH_YEAR[currentMonth]+')</small></div>';
     html += '<div class="stat-grid" style="grid-template-columns:1fr 1fr;">'+
       '<div class="stat-card"><div class="lbl">'+MONTHS[currentMonth]+' Borcu <span style="font-weight:400;">(ödeme öncesi)</span></div><div class="val">'+fmtShort(ana.start)+'</div></div>'+
       '<div class="stat-card"><div class="lbl">Kalan Ana Borç <span style="font-weight:400;">(✓ işaretledikçe düşer)</span></div><div class="val red">'+fmtShort(ana.remaining)+'</div></div>'+
@@ -980,7 +980,7 @@ if(FIREBASE_CONFIGURED){
     for(var i=0;i<12;i++){
       var bal = currentDebtBalance(i);
       chips += '<button type="button" class="cal-chip'+(i===currentMonth?' active':'')+'" data-action="jump-month" data-mi="'+i+'">'+
-        '<span class="cal-m">'+MONTHS[i].slice(0,3)+'</span><span class="cal-v">'+fmtShort(bal)+'</span></button>';
+        '<span class="cal-m">'+MONTHS[i].slice(0,3)+' '+MONTH_YEAR[i].toString().slice(2)+'</span><span class="cal-v">'+fmtShort(bal)+'</span></button>';
     }
     return '<div class="cal-strip">'+chips+'</div>';
   }
@@ -1100,7 +1100,7 @@ if(FIREBASE_CONFIGURED){
       html += '<div class="card"><div class="card-row"><strong>'+label+'</strong><span style="font-weight:800;">'+gramFmt(totalGram)+' g &middot; '+fmtShort(totalVal)+'</span></div>';
       if(!arr.length){ html += '<div class="empty-hint">Henüz giriş yok.</div>'; }
       html += arr.map(function(g){
-        return '<div class="field-inline"><span class="fname">'+gramFmt(g.gram)+' g <span class="sub">'+MONTHS[g.mi]+'</span></span>'+
+        return '<div class="field-inline"><span class="fname">'+gramFmt(g.gram)+' g <span class="sub">'+MONTHS[g.mi]+' '+MONTH_YEAR[g.mi]+'</span></span>'+
           '<button class="icon-btn danger" data-list="gold-'+key+'" data-id="'+g.id+'" data-action="del">✕</button></div>';
       }).join('');
       html += '</div>';
@@ -1237,7 +1237,6 @@ if(FIREBASE_CONFIGURED){
       btn.classList.toggle('active', btn.dataset.tab===currentTab);
     });
 
-    // Kullanıcı bir inputa yazıyorsa ekranı yenileme (klavye açık kalır)
     var activeEl = document.activeElement;
     if(!activeEl || activeEl.tagName !== 'INPUT'){
       var scrollY = window.scrollY;
