@@ -45,8 +45,6 @@ body{
   color:var(--ink);
   font-family:var(--font);
   -webkit-font-smoothing:antialiased;
-  min-height:100vh;
-  padding-bottom:78px;
 }
 button{font-family:inherit;}
 input{font-family:inherit;}
@@ -58,6 +56,7 @@ input{font-family:inherit;}
   min-height:100vh;
   background:var(--bg);
   position:relative;
+  padding-bottom:78px;
 }
 .topbar{
   position:sticky; top:0; z-index:50;
@@ -288,12 +287,13 @@ input{font-family:inherit;}
 
 /* ===== Auth / Login screen ===== */
 .auth-wrap{
-  min-height:100vh; display:flex; align-items:center; justify-content:center;
-  padding:24px; background:var(--bg);
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: var(--bg); overflow-y: auto;
 }
 .auth-card{
   width:100%; max-width:360px; background:var(--card); border:1px solid var(--card-border);
-  border-radius:20px; padding:28px 24px; box-shadow:var(--shadow);
+  border-radius:20px; padding:28px 24px; box-shadow:var(--shadow); margin: auto;
 }
 .auth-card h1{font-size:20px; font-weight:800; margin:0 0 2px; text-align:center;}
 .auth-card .sub{font-size:12.5px; color:var(--ink-soft); text-align:center; margin:0 0 20px;}
@@ -453,79 +453,28 @@ if(FIREBASE_CONFIGURED){
     };
   }
 
-  function migrateOldIncome(parsed){
-    if(!parsed.salaryFixed) return null;
-    var sf = parsed.salaryFixed;
-    var out = {};
-    MONTHS.forEach(function(m){
-      var sm = (parsed.salaryMonthly && parsed.salaryMonthly[m]) || {};
-      var pazarGun = Number(sm.pazarGun||0), mesaiSaat = Number(sm.mesaiSaat||0);
-      var toplam = Number(sf.netMaas||0)+Number(sf.sendika||0)+Number(sf.aile||0)+pazarGun*Number(sf.pazarRate||0)+mesaiSaat*Number(sf.mesaiRate||0);
-      out[m] = {gelir: toplam};
-    });
-    return out;
-  }
-
   function normalizeState(parsed){
     var def = defaultState();
     var out = Object.assign({}, def, parsed || {});
-    var migratedIncome = migrateOldIncome(parsed || {});
-    if(migratedIncome){
-      out.salaryMonthly = migratedIncome;
-    } else {
-      out.salaryMonthly = out.salaryMonthly || {};
-      MONTHS.forEach(function(m){
-        var sm = out.salaryMonthly[m];
-        if(!sm || typeof sm.gelir !== 'number'){ out.salaryMonthly[m] = {gelir:(sm&&sm.gelir)?Number(sm.gelir):0}; }
-      });
-    }
+    out.salaryMonthly = out.salaryMonthly || {};
+    MONTHS.forEach(function(m){
+      var sm = out.salaryMonthly[m];
+      if(!sm || typeof sm.gelir !== 'number'){ out.salaryMonthly[m] = {gelir:(sm&&sm.gelir)?Number(sm.gelir):0}; }
+    });
     out.borsaOran = Array.isArray(out.borsaOran) && out.borsaOran.length===12 ? out.borsaOran : def.borsaOran;
     out.expenses = Array.isArray(out.expenses) ? out.expenses : def.expenses;
     out.faturalar = (Array.isArray(out.faturalar) ? out.faturalar : def.faturalar).map(function(f){
-      var amounts = f.monthlyAmounts;
-      if(!Array.isArray(amounts)){
-        if(f.amounts && typeof f.amounts === 'object'){
-          amounts = [];
-          for(var i=0;i<12;i++){ amounts.push(Number(f.amounts[i]||0)); }
-        } else {
-          var flat = Number(f.tutar||0);
-          amounts = MONTHS.map(function(){return flat;});
-        }
-      }
+      var amounts = f.monthlyAmounts || MONTHS.map(function(){return Number(f.tutar||0);});
       return {id:f.id||uid(), ad:f.ad||'Fatura', monthlyAmounts:amounts, cardTransfers:f.cardTransfers||{}};
     });
-    if(!out.offBudgetExpenses){
-      out.offBudgetExpenses = MONTHS.map(function(){return [];});
-    } else if(!Array.isArray(out.offBudgetExpenses)){
-      var arr = [];
-      MONTHS.forEach(function(m){ arr.push(out.offBudgetExpenses[m] || []); });
-      out.offBudgetExpenses = arr;
-    }
-    out.gold = (out.gold && typeof out.gold === 'object') ? out.gold : {ayar24:[], ayar22:[], guncelFiyat24:0, guncelFiyat22:0};
-    ['ayar24','ayar22'].forEach(function(k){
-      out.gold[k] = (Array.isArray(out.gold[k]) ? out.gold[k] : []).map(function(g){
-        return {id:g.id || uid(), gram:Number(g.gram || 0), mi:Math.max(0, Math.min(11, Number(g.mi || 0)))};
-      });
-    });
-    out.gold.guncelFiyat24 = Number(out.gold.guncelFiyat24||0);
-    out.gold.guncelFiyat22 = Number(out.gold.guncelFiyat22||0);
+    out.offBudgetExpenses = Array.isArray(out.offBudgetExpenses) ? out.offBudgetExpenses : def.offBudgetExpenses;
+    out.gold = (out.gold && typeof out.gold === 'object') ? out.gold : def.gold;
     out.debts = (Array.isArray(out.debts) ? out.debts : def.debts).map(function(d,idx){
-      return Object.assign({}, d, {
-        payments:d.payments || {}, balanceOverrides:d.balanceOverrides || {}, additions:d.additions || {},
-        paidMonths:d.paidMonths || {}, missedMonths:d.missedMonths || {}, hidden: !!d.hidden,
-        sortOrder:(typeof d.sortOrder==='number')?d.sortOrder:idx,
-        startMonthIndex:Math.max(0, Number(d.startMonthIndex || 0))
-      });
+      return Object.assign({}, d, { payments:d.payments||{}, balanceOverrides:d.balanceOverrides||{}, additions:d.additions||{}, paidMonths:d.paidMonths||{}, missedMonths:d.missedMonths||{}, hidden:!!d.hidden, sortOrder:typeof d.sortOrder==='number'?d.sortOrder:idx, startMonthIndex:Math.max(0,Number(d.startMonthIndex||0)) });
     });
     out.ekBorclular = (Array.isArray(out.ekBorclular) ? out.ekBorclular : def.ekBorclular).map(function(d,idx){
-      return Object.assign({}, d, {
-        payments:d.payments || {}, balanceOverrides:d.balanceOverrides || {}, additions:d.additions || {},
-        paidMonths:d.paidMonths || {}, missedMonths:d.missedMonths || {}, hidden: !!d.hidden,
-        sortOrder:(typeof d.sortOrder==='number')?d.sortOrder:idx,
-        startMonthIndex:Math.max(0, Number(d.startMonthIndex || 0))
-      });
+      return Object.assign({}, d, { payments:d.payments||{}, balanceOverrides:d.balanceOverrides||{}, additions:d.additions||{}, paidMonths:d.paidMonths||{}, missedMonths:d.missedMonths||{}, hidden:!!d.hidden, sortOrder:typeof d.sortOrder==='number'?d.sortOrder:idx, startMonthIndex:Math.max(0,Number(d.startMonthIndex||0)) });
     });
-    delete out.salaryFixed;
     return out;
   }
 
@@ -533,11 +482,10 @@ if(FIREBASE_CONFIGURED){
     try{
       var raw = localStorage.getItem(STORAGE_KEY);
       if(raw) return normalizeState(JSON.parse(raw));
-      var oldRaw = localStorage.getItem('birikimDefteri_v2');
-      if(oldRaw) return normalizeState(JSON.parse(oldRaw));
       return normalizeState(defaultState());
     }catch(e){ return normalizeState(defaultState()); }
   }
+  
   var cloudSaveTimer = null;
   function saveToCloud(){
     if(!FIREBASE_CONFIGURED || !fbAuth || !fbAuth.currentUser || !fbDb) return;
@@ -547,22 +495,10 @@ if(FIREBASE_CONFIGURED){
       fbDb.collection('users').doc(uid).set(STATE).catch(function(err){ console.error('Bulut kaydetme hatası', err); });
     }, 600);
   }
+  
   function save(){
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }catch(e){}
     saveToCloud();
-  }
-  function loadStateFromCloud(uid){
-    return fbDb.collection('users').doc(uid).get().then(function(doc){
-      if(doc.exists && doc.data()){
-        STATE = normalizeState(doc.data());
-      } else {
-        STATE = load();
-        fbDb.collection('users').doc(uid).set(STATE).catch(function(){});
-      }
-    }).catch(function(err){
-      console.error('Bulut yükleme hatası', err);
-      STATE = load();
-    });
   }
 
   var STATE = normalizeState(defaultState());
@@ -1204,7 +1140,6 @@ if(FIREBASE_CONFIGURED){
     var isDesktop = window.innerWidth >= 900;
     document.getElementById('sidebar').style.display = isDesktop ? 'flex' : 'none';
 
-    // Menü bir kere doldurulacak, sürekli üzerine yazılmayacak.
     if(document.getElementById('tabbar').innerHTML === ''){
         var tabbarHtml = TABS.map(function(t){
           return '<button type="button" class="tabbtn'+(t.id===currentTab?' active':'')+'" data-tab="'+t.id+'"><span class="ic">'+t.icon+'</span>'+t.label+'</button>';
@@ -1231,7 +1166,7 @@ if(FIREBASE_CONFIGURED){
   }
   function rerender(){ save(); render(); }
 
-  // Virtual DOM Sync Algoritması (Klavyeni bölmeden tüm HTML'i anlık günceller)
+  // Girdiğiniz verileri siz daha klavyeyi kapatmadan anında hesaplatıp ekrana yansıtan sanal yapı
   function syncDOM(oldEl, newEl) {
       if (!oldEl || !newEl) return;
       if (oldEl.nodeType === 3 && newEl.nodeType === 3) {
@@ -1239,16 +1174,15 @@ if(FIREBASE_CONFIGURED){
           return;
       }
       if (oldEl.nodeType !== 1 || newEl.nodeType !== 1) return;
-      // İNPUT VE SELECTLERE ASLA DOKUNMA! Sadece renkleri (sınır çizgisi vs) eşitle
+      
+      // YAZI YAZILAN KUTULARA (INPUT/SELECT) KESİNLİKLE DOKUNMA Kİ İMLEÇ KAYMASIN!
       if (oldEl.tagName === 'INPUT' || oldEl.tagName === 'SELECT' || oldEl.tagName === 'TEXTAREA') {
-          if (oldEl.className !== newEl.className) oldEl.className = newEl.className;
-          if (oldEl.style.cssText !== newEl.style.cssText) oldEl.style.cssText = newEl.style.cssText;
-          return;
+          return; 
       }
+      
       if (oldEl.childNodes.length !== newEl.childNodes.length) {
           if (!oldEl.contains(document.activeElement)) {
               oldEl.innerHTML = newEl.innerHTML;
-              if (oldEl.className !== newEl.className) oldEl.className = newEl.className;
           }
           return;
       }
@@ -1256,10 +1190,8 @@ if(FIREBASE_CONFIGURED){
           syncDOM(oldEl.childNodes[i], newEl.childNodes[i]);
       }
       if (oldEl.className !== newEl.className) oldEl.className = newEl.className;
-      if (oldEl.style.cssText !== newEl.style.cssText) oldEl.style.cssText = newEl.style.cssText;
   }
 
-  // Yazı yazıldığı anda arka planda işleme yap
   function handleInputEvent(e){
     var t = e.target;
     var action = t.dataset.action;
@@ -1268,27 +1200,23 @@ if(FIREBASE_CONFIGURED){
 
     if(action==='income'){
       if(!blank) STATE.salaryMonthly[MONTHS[currentMonth]].gelir = parseNum(t.value);
-    }
-    else if(action==='name'){
+    } else if(action==='name'){
       var list = findList(t.dataset.list);
       var item = list.filter(function(x){return x.id===t.dataset.id;})[0];
       if(item){ item.ad = t.value; }
-    }
-    else if(action==='amt'){
+    } else if(action==='amt'){
       if(!blank){
         var list2 = findList(t.dataset.list);
         var item2 = list2.filter(function(x){return x.id===t.dataset.id;})[0];
         if(item2){ item2.tutar = parseNum(t.value); }
       }
-    }
-    else if(action==='fatura-amt'){
+    } else if(action==='fatura-amt'){
       if(!blank){
         var f6 = STATE.faturalar.filter(function(x){return x.id===t.dataset.id;})[0];
         var mi6 = parseInt(t.dataset.mi,10);
         if(f6){ f6.monthlyAmounts[mi6] = parseNum(t.value); }
       }
-    }
-    else if(action==='offbudget-name' || action==='offbudget-amt'){
+    } else if(action==='offbudget-name' || action==='offbudget-amt'){
       var mi7 = parseInt(t.dataset.mi,10);
       var offList = STATE.offBudgetExpenses[mi7]||[];
       var offItem = offList.filter(function(x){return x.id===t.dataset.id;})[0];
@@ -1296,15 +1224,13 @@ if(FIREBASE_CONFIGURED){
         if(action==='offbudget-name') offItem.ad = t.value; 
         else if(!blank) offItem.tutar = Math.max(0,parseNum(t.value));
       }
-    }
-    else if(action==='principal'){
+    } else if(action==='principal'){
       if(!blank){
         var pl = findList(t.dataset.list);
         var pi = pl.filter(function(x){return x.id===t.dataset.id;})[0];
         if(pi){ pi.baslangic = Math.max(0,parseNum(t.value)); }
       }
-    }
-    else if(action==='balance'){
+    } else if(action==='balance'){
       var bl = findList(t.dataset.list);
       var bi = bl.filter(function(x){return x.id===t.dataset.id;})[0];
       var bmi = parseInt(t.dataset.mi,10);
@@ -1312,35 +1238,27 @@ if(FIREBASE_CONFIGURED){
         bi.balanceOverrides = bi.balanceOverrides || {};
         if(blank) delete bi.balanceOverrides[bmi]; else bi.balanceOverrides[bmi] = Math.max(0,parseNum(t.value));
       }
-    }
-    else if(action==='pay'){
+    } else if(action==='pay'){
       var pl2 = findList(t.dataset.list);
       var pi2 = pl2.filter(function(x){return x.id===t.dataset.id;})[0];
       var pmi = parseInt(t.dataset.mi,10);
       if(pi2){
         if(blank) delete pi2.payments[pmi]; else pi2.payments[pmi] = parseNum(t.value);
       }
-    }
-    else if(action==='kk-rate'){
+    } else if(action==='kk-rate'){
       if(!blank){
         var kl = findList(t.dataset.list);
         var ki = kl.filter(function(x){return x.id===t.dataset.id;})[0];
         if(ki){ ki[t.dataset.field] = Math.max(0,parseNum(t.value)); }
       }
-    }
-    else if(action==='gold-price'){
-      if(!blank){
-        STATE.gold[t.dataset.field] = Math.max(0,parseNum(t.value));
-      }
-    }
-    else if(action==='borsa-oran'){
-      if(!blank){
-        STATE.borsaOran[parseInt(t.dataset.i,10)] = parseNum(t.value);
-      }
+    } else if(action==='gold-price'){
+      if(!blank){ STATE.gold[t.dataset.field] = Math.max(0,parseNum(t.value)); }
+    } else if(action==='borsa-oran'){
+      if(!blank){ STATE.borsaOran[parseInt(t.dataset.i,10)] = parseNum(t.value); }
     }
     save();
 
-    // Sen yazarken sistem arka planda yeni HTML'i hesaplar ve eskiyle farklarını (sadece sayı olan metinleri vs) anında günceller.
+    // Veri anlık işlenip (hesaplanıp) senin klavyene veya yazdığın kutuya dokunulmadan grafiğe/toplamlara yansıtılıyor
     var newHtml = (RENDERERS[currentTab]||renderOzet)();
     var temp = document.createElement('div');
     temp.innerHTML = newHtml;
@@ -1384,16 +1302,14 @@ if(FIREBASE_CONFIGURED){
   }
 
   function onClick(e){
-    var t = e.target.closest ? e.target.closest('[data-action]') : null;
-    
-    // Alt veya yan menüdeki sekmelere tıklandığında:
-    var tabBtn = e.target.closest('.tabbtn');
+    var tabBtn = e.target.closest ? e.target.closest('.tabbtn') : null;
     if(tabBtn) {
         currentTab = tabBtn.dataset.tab;
         render();
         return;
     }
 
+    var t = e.target.closest ? e.target.closest('[data-action]') : null;
     if(!t) return;
     var action = t.dataset.action;
     if(!action) return;
@@ -1500,7 +1416,6 @@ if(FIREBASE_CONFIGURED){
     }
   }
 
-  // Aylar arasi gecis butonlarinin gorevleri tek bir kez ve sadece burada veriliyor!
   document.getElementById('prevMonth').addEventListener('click', function(){
     if(currentMonth > 0){ currentMonth--; render(); }
   });
@@ -1585,9 +1500,23 @@ if(FIREBASE_CONFIGURED){
 
     fbAuth.onAuthStateChanged(function(user){
       if(user){
+        // Firebase senkronizasyonunun bitmesini beklemeden içeri atıyoruz ki "Yükleniyor"da takılı kalmasın
         document.getElementById('authFormArea').style.display = 'none';
-        document.getElementById('authLoading').style.display = 'block';
-        loadStateFromCloud(user.uid).then(showApp);
+        document.getElementById('authLoading').style.display = 'none';
+        
+        STATE = load();
+        showApp();
+        
+        // Arka planda bulut verilerini sessizce yükle ve ekranı güncelle
+        fbDb.collection('users').doc(user.uid).get().then(function(doc){
+          if(doc.exists && doc.data()){
+            STATE = normalizeState(doc.data());
+            save(); 
+            if(document.getElementById('app').style.display !== 'none'){
+              render(); 
+            }
+          }
+        }).catch(function(err){ console.warn("Bulut eşitleme hatası:", err); });
       } else {
         showAuthScreen();
       }
