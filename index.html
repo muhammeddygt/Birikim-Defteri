@@ -1217,49 +1217,6 @@ if(FIREBASE_CONFIGURED){
     });
   }
 
-  function captureFocusState(){
-    var el = document.activeElement;
-    var page = document.getElementById('tabpage');
-    if(!el || !page.contains(el)) return null;
-    var tag = el.tagName;
-    if(tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') return null;
-    if(el.dataset && el.dataset.action){
-      return {
-        mode:'action', action: el.dataset.action, id: el.dataset.id || null,
-        mi: (el.dataset.mi !== undefined) ? el.dataset.mi : null,
-        field: el.dataset.field || null,
-        selStart: (typeof el.selectionStart === 'number') ? el.selectionStart : null,
-        selEnd: (typeof el.selectionEnd === 'number') ? el.selectionEnd : null
-      };
-    }
-    if(el.id){
-      return {
-        mode:'id', elId: el.id,
-        selStart: (typeof el.selectionStart === 'number') ? el.selectionStart : null,
-        selEnd: (typeof el.selectionEnd === 'number') ? el.selectionEnd : null
-      };
-    }
-    return null;
-  }
-  function restoreFocusState(state){
-    if(!state) return;
-    var el;
-    if(state.mode === 'id'){
-      el = document.getElementById(state.elId);
-    } else {
-      var sel = '[data-action="'+state.action+'"]';
-      if(state.id) sel += '[data-id="'+state.id+'"]';
-      if(state.mi !== null) sel += '[data-mi="'+state.mi+'"]';
-      if(state.field) sel += '[data-field="'+state.field+'"]';
-      el = document.getElementById('tabpage').querySelector(sel);
-    }
-    if(!el) return;
-    el.focus();
-    if(state.selStart !== null && typeof el.setSelectionRange === 'function'){
-      try{ el.setSelectionRange(state.selStart, state.selEnd); }catch(err){}
-    }
-  }
-
   function render(){
     var tabDef = TABS.filter(function(t){return t.id===currentTab;})[0] || TABS[0];
     document.getElementById('pageTitle').textContent = tabDef.label;
@@ -1269,12 +1226,8 @@ if(FIREBASE_CONFIGURED){
       btn.classList.toggle('active', btn.dataset.tab===currentTab);
     });
 
-    var scrollY = window.scrollY;
-    var focusState = captureFocusState();
     document.getElementById('tabpage').innerHTML = (RENDERERS[currentTab]||renderOzet)();
     wireOpenForms();
-    window.scrollTo(0, scrollY);
-    restoreFocusState(focusState);
   }
   function rerender(){ save(); render(); }
 
@@ -1505,6 +1458,13 @@ if(FIREBASE_CONFIGURED){
     }
   }
 
+  document.getElementById('app').addEventListener('input', function(e){
+    var t = e.target;
+    if(t.dataset && (t.dataset.action === 'name' || t.dataset.action === 'amt' || t.dataset.action === 'fatura-amt' || t.dataset.action === 'offbudget-name' || t.dataset.action === 'offbudget-amt' || t.dataset.action === 'pay' || t.dataset.action === 'balance' || t.dataset.action === 'kk-rate' || t.dataset.action === 'gold-price' || t.dataset.action === 'borsa-oran' || t.dataset.action === 'income')){
+      return;
+    }
+  });
+
   document.getElementById('app').addEventListener('change', onChange);
   document.getElementById('app').addEventListener('click', onClick);
   window.addEventListener('resize', function(){ if(document.getElementById('app').style.display !== 'none'){ buildShell(); render(); } });
@@ -1530,7 +1490,7 @@ if(FIREBASE_CONFIGURED){
     el.style.color = ok ? 'var(--green)' : 'var(--red)';
     el.classList.add('show');
   }
-  function hideAuthError(){ document.getElementById('authError').classList.remove('string'); }
+  function hideAuthError(){ document.getElementById('authError').classList.remove('show'); }
   function updateAuthModeUI(){
     document.getElementById('authSubmitBtn').textContent = authMode==='signin' ? 'Giriş Yap' : 'Kayıt Ol';
     document.getElementById('authToggleMode').textContent = authMode==='signin' ? 'Hesabınız yok mu? Kayıt olun' : 'Zaten hesabınız var mı? Giriş yapın';
@@ -1572,7 +1532,7 @@ if(FIREBASE_CONFIGURED){
       });
     });
     document.getElementById('authForgotBtn').addEventListener('click', function(){
-      var email = document.getElementById('authEmail').value.trim();
+      var email = document.getElementById('authEmail'].value.trim();
       if(!email){ showAuthError('Şifre sıfırlama için önce e-posta adresinizi girin.'); return; }
       fbAuth.sendPasswordResetEmail(email).then(function(){
         showAuthError('Şifre sıfırlama bağlantısı e-postanıza gönderildi.', true);
