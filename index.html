@@ -1350,6 +1350,10 @@ if(FIREBASE_CONFIGURED){
       reader.readAsText(file);
       t.value=''; return;
     }
+
+    if(['income', 'name', 'amt', 'fatura-amt', 'offbudget-name', 'offbudget-amt', 'principal', 'balance', 'pay', 'kk-rate', 'gold-price', 'borsa-oran'].indexOf(action) !== -1){
+      render();
+    }
   }
 
   function onClick(e){
@@ -1462,14 +1466,23 @@ if(FIREBASE_CONFIGURED){
     }
   }
 
-  // BURASI KRİTİK: Kullanıcı kutudan çıkıp başka yere tıkladığında veya alanı bitirdiğinde (change) otomatik kaydedilip her şey anında güncellenir.
   document.getElementById('app').addEventListener('input', function(e){
     handleInput(e);
     save();
   });
   document.getElementById('app').addEventListener('change', onChange);
   document.getElementById('app').addEventListener('click', onClick);
-  window.addEventListener('resize', function(){ if(document.getElementById('app').style.display !== 'none'){ buildShell(); render(); } });
+  
+  var lastWindowWidth = window.innerWidth;
+  window.addEventListener('resize', function(){ 
+    if(window.innerWidth !== lastWindowWidth){
+      lastWindowWidth = window.innerWidth;
+      if(document.getElementById('app').style.display !== 'none'){ 
+        buildShell(); 
+        render(); 
+      } 
+    }
+  });
 
   function showApp(){
     document.getElementById('authWrap').style.display = 'none';
