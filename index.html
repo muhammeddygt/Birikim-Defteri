@@ -379,7 +379,6 @@ input{font-family:inherit;}
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 <script>
 // ====== FIREBASE YAPILANDIRMASI — kendi Firebase projenizin bilgileriyle doldurun ======
-// Firebase Console (console.firebase.google.com) > Proje Ayarları > Web uygulaması bölümünden alınır.
 var firebaseConfig = {
   apiKey: "AIzaSyCtLdK_d2A1pyF7R2yXL3kMW5B5bhqgLGs",
   authDomain: "birikim-defteri-97b65.firebaseapp.com",
@@ -456,7 +455,6 @@ if(FIREBASE_CONFIGURED){
   }
 
   function migrateOldIncome(parsed){
-    // old versions stored salaryFixed{netMaas,sendika,aile,pazarRate,mesaiRate} + salaryMonthly[m]{pazarGun,mesaiSaat}
     if(!parsed.salaryFixed) return null;
     var sf = parsed.salaryFixed;
     var out = {};
@@ -490,7 +488,6 @@ if(FIREBASE_CONFIGURED){
     out.faturalar = (Array.isArray(out.faturalar) ? out.faturalar : def.faturalar).map(function(f){
       var amounts = f.monthlyAmounts;
       if(!Array.isArray(amounts)){
-        // old flat-`amounts` object format or single tutar
         if(f.amounts && typeof f.amounts === 'object'){
           amounts = [];
           for(var i=0;i<12;i++){ amounts.push(Number(f.amounts[i]||0)); }
@@ -505,7 +502,6 @@ if(FIREBASE_CONFIGURED){
     if(!out.offBudgetExpenses){
       out.offBudgetExpenses = MONTHS.map(function(){return [];});
     } else if(!Array.isArray(out.offBudgetExpenses)){
-      // old object-by-monthname format
       var arr = [];
       MONTHS.forEach(function(m){ arr.push(out.offBudgetExpenses[m] || []); });
       out.offBudgetExpenses = arr;
@@ -568,7 +564,7 @@ if(FIREBASE_CONFIGURED){
       if(doc.exists && doc.data()){
         STATE = normalizeState(doc.data());
       } else {
-        STATE = load(); // migrate any existing local data (or start fresh) for a brand-new account
+        STATE = load();
         fbDb.collection('users').doc(uid).set(STATE).catch(function(){});
       }
     }).catch(function(err){
@@ -579,7 +575,7 @@ if(FIREBASE_CONFIGURED){
 
   var STATE = normalizeState(defaultState());
   var currentTab = 'ozet';
-  var pendingDebtForm = null; // survives re-renders so the open form never silently resets
+  var pendingDebtForm = null;
   var pendingGoldForm = null;
   var currentMonth = 0;
 
@@ -731,21 +727,6 @@ if(FIREBASE_CONFIGURED){
     return {g24:g24, g22:g22, v24:v24, v22:v22, toplam:v24+v22};
   }
 
-  function totalDebtBalance(){
-    var d1 = STATE.debts.reduce(function(s,d){
-      var ser = calcDebtSeries(d);
-      var last = null;
-      for(var i=11;i>=0;i--){ if(ser.balances[i]!==null){ last = ser.balances[i]; break; } }
-      return s + (last||0);
-    },0);
-    var d2 = STATE.ekBorclular.reduce(function(s,d){
-      var ser = calcEkSeries(d);
-      var last = null;
-      for(var i=11;i>=0;i--){ if(ser.balances[i]!==null){ last = ser.balances[i]; break; } }
-      return s + (last||0);
-    },0);
-    return d1+d2;
-  }
   function currentDebtBalance(i){
     var d1 = STATE.debts.reduce(function(s,d){
       if(i<d.startMonthIndex) return s;
@@ -767,8 +748,6 @@ if(FIREBASE_CONFIGURED){
     return ser.balances[mi-1] || 0;
   }
 
-  // Total principal owed at the start of the month (before this month's payments),
-  // and a "kalan" figure that only drops for items you've actually ticked as paid.
   function anaBorcStats(mi){
     var startTotal = 0, remainingTotal = 0;
     function process(d, isDebtList){
@@ -816,7 +795,6 @@ if(FIREBASE_CONFIGURED){
     save(); render();
   }
 
-  // ---------- shared component builders ----------
   function moveButtons(listName,id){
     return '<span class="move-col">'+
       '<button type="button" data-action="move-up" data-list="'+listName+'" data-id="'+id+'" title="Yukarı">▲</button>'+
@@ -961,7 +939,6 @@ if(FIREBASE_CONFIGURED){
     }
   }
 
-  // ---------- Tab renderers ----------
   function renderOzet(){
     var mt = monthTotals(currentMonth);
     var heroClass = mt.netKalan < 0 ? 'warn' : '';
@@ -1231,7 +1208,6 @@ if(FIREBASE_CONFIGURED){
 
   var RENDERERS = {ozet:renderOzet, borclar:renderBorclar, giderler:renderGiderler, birikim:renderBirikim, genel:renderGenel};
 
-  // ---------- Shell / navigation ----------
   function buildShell(){
     var isDesktop = window.innerWidth >= 900;
     document.getElementById('sidebar').style.display = isDesktop ? 'flex' : 'none';
@@ -1262,7 +1238,7 @@ if(FIREBASE_CONFIGURED){
     var page = document.getElementById('tabpage');
     if(!el || !page.contains(el)) return null;
     var tag = el.tagName;
-    if(tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') return null; // never refocus buttons (causes scroll jump)
+    if(tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') return null;
     if(el.dataset && el.dataset.action){
       return {
         mode:'action', action: el.dataset.action, id: el.dataset.id || null,
@@ -1321,7 +1297,6 @@ if(FIREBASE_CONFIGURED){
   }
   function rerender(){ save(); render(); }
 
-  // ---------- Event delegation ----------
   function onChange(e){
     var t = e.target;
     var action = t.dataset.action;
@@ -1566,7 +1541,6 @@ if(FIREBASE_CONFIGURED){
     document.getElementById('authLoading').style.display = 'none';
   }
 
-  // ---------- Auth screen wiring ----------
   var authMode = 'signin';
   function showAuthError(msg, ok){
     var el = document.getElementById('authError');
@@ -1575,7 +1549,7 @@ if(FIREBASE_CONFIGURED){
     el.style.color = ok ? 'var(--green)' : 'var(--red)';
     el.classList.add('show');
   }
-  function hideAuthError(){ document.getElementById('authError').classList.remove('show'); }
+  function hideAuthError(){ document.getElementById('authError').classList.remove('string'); }
   function updateAuthModeUI(){
     document.getElementById('authSubmitBtn').textContent = authMode==='signin' ? 'Giriş Yap' : 'Kayıt Ol';
     document.getElementById('authToggleMode').textContent = authMode==='signin' ? 'Hesabınız yok mu? Kayıt olun' : 'Zaten hesabınız var mı? Giriş yapın';
@@ -1637,12 +1611,10 @@ if(FIREBASE_CONFIGURED){
       showAuthError('Bağlantı hatası: ' + ((err && err.message) || 'bilinmeyen hata'));
     });
   } else if(FIREBASE_CONFIGURED){
-    // Config looks filled in, but the Firebase SDK itself failed to load (no internet / blocked CDN).
     document.getElementById('authFormArea').style.display = 'none';
     document.getElementById('authLoading').style.display = 'none';
     showAuthError('Firebase yüklenemedi. İnternet bağlantınızı kontrol edip sayfayı yenileyin.');
   } else {
-    // Firebase not set up yet — fall back to local-only mode so the file still works while you configure it.
     document.getElementById('authConfigWarn').style.display = 'block';
     STATE = load();
     showApp();
