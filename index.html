@@ -62,25 +62,13 @@ input{font-family:inherit;}
 .topbar{
   position:sticky; top:0; z-index:50;
   background:rgba(243,245,248,.92); backdrop-filter:blur(10px);
-  padding:16px 18px 10px;
+  padding:16px 18px 14px;
   border-bottom:1px solid var(--card-border);
 }
 .topbar h1{
   font-size:20px; margin:0 0 2px; font-weight:800; letter-spacing:-.01em;
 }
-.topbar .sub{font-size:12.5px; color:var(--ink-soft); margin:0 0 12px;}
-.month-switch{
-  display:flex; align-items:center; justify-content:space-between;
-  background:var(--card); border:1px solid var(--card-border); border-radius:999px;
-  padding:6px 8px;
-}
-.month-switch button{
-  width:34px; height:34px; border-radius:50%; border:none; background:var(--accent-soft);
-  color:var(--accent-strong); font-size:16px; cursor:pointer;
-  display:flex; align-items:center; justify-content:center;
-}
-.month-switch button:active{background:var(--accent);color:#fff;}
-.month-switch .label{font-weight:700; font-size:14.5px;}
+.topbar .sub{font-size:12.5px; color:var(--ink-soft); margin:0;}
 
 .tabpage{padding:14px 16px 24px;}
 .tabpage h2{font-size:18px; margin:2px 0 2px; font-weight:800;}
@@ -281,7 +269,6 @@ input{font-family:inherit;}
   .topbar{grid-column:2; max-width:none; padding:22px 32px 14px;}
   .tabpage{grid-column:2; max-width:920px; padding:18px 32px 40px;}
   .stat-grid{grid-template-columns:repeat(4,1fr);}
-  .month-switch{max-width:280px;}
   .debt-grid-desktop{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
   .debt-grid-desktop .debt-card{margin-bottom:0;}
 }
@@ -362,11 +349,6 @@ input{font-family:inherit;}
   <div class="topbar">
     <h1 id="pageTitle">Özet</h1>
     <div class="sub" id="pageSub">Tüm finansal tablonuz</div>
-    <div class="month-switch">
-      <button type="button" id="prevMonth">‹</button>
-      <div class="label" id="monthLabel">Ağustos 2026</div>
-      <button type="button" id="nextMonth">›</button>
-    </div>
   </div>
 
   <div class="tabpage" id="tabpage"></div>
@@ -939,10 +921,24 @@ if(FIREBASE_CONFIGURED){
     }
   }
 
+  function debtCalendarHtml(){
+    var chips = '';
+    for(var i=0;i<12;i++){
+      var bal = currentDebtBalance(i);
+      chips += '<button type="button" class="cal-chip'+(i===currentMonth?' active':'')+'" data-action="jump-month" data-mi="'+i+'">'+
+        '<span class="cal-m">'+MONTHS[i].slice(0,3)+'</span><span class="cal-v">'+fmtShort(bal)+'</span></button>';
+    }
+    return '<div class="cal-strip">'+chips+'</div>';
+  }
+
   function renderOzet(){
     var mt = monthTotals(currentMonth);
     var heroClass = mt.netKalan < 0 ? 'warn' : '';
     var html = '';
+    
+    html += '<div class="section-title">Ay Seçimi <small style="text-transform:none;font-weight:600;">(aya dokunarak atlayın)</small></div>';
+    html += debtCalendarHtml();
+
     html += '<div class="hero-card '+heroClass+'">'+
       '<div class="label">Bu Ayki Net Kalan</div>'+
       '<div class="value">'+fmt(mt.netKalan)+'</div>'+
@@ -971,9 +967,6 @@ if(FIREBASE_CONFIGURED){
       '<div class="field-inline"><span class="fname">Genel Toplam Borç<span class="sub">tüm borç ve kredi kartları, güncel bakiye</span></span><span style="font-weight:800;font-family:var(--font-mono);">'+fmt(toplamBorcSimdi)+'</span></div>'+
     '</div>';
 
-    html += '<div class="section-title">Borç Takvimi <small style="text-transform:none;font-weight:600;">(aya dokunarak atlayın)</small></div>';
-    html += debtCalendarHtml();
-
     html += '<div class="section-title">Ödeme Durumu</div>';
     html += '<div class="card">'+
       '<div class="field-inline"><span class="fname">Ödenen Borçlar<span class="sub">✓ işaretlediğiniz kalemler</span></span><span style="font-weight:800;color:var(--green);">'+fmt(mt.odenenBorc)+'</span></div>'+
@@ -983,21 +976,15 @@ if(FIREBASE_CONFIGURED){
     return html;
   }
 
-  function debtCalendarHtml(){
-    var chips = '';
-    for(var i=0;i<12;i++){
-      var bal = currentDebtBalance(i);
-      chips += '<button type="button" class="cal-chip'+(i===currentMonth?' active':'')+'" data-action="jump-month" data-mi="'+i+'">'+
-        '<span class="cal-m">'+MONTHS[i].slice(0,3)+'</span><span class="cal-v">'+fmtShort(bal)+'</span></button>';
-    }
-    return '<div class="cal-strip">'+chips+'</div>';
-  }
-
   function renderBorclar(){
     var mi = currentMonth;
     var totalBal = currentDebtBalance(mi);
     var minPay = monthTotals(mi).borcOdemeToplam;
     var html = '';
+    
+    html += '<div class="section-title">Ay Seçimi <small style="text-transform:none;font-weight:600;">(aya dokunarak atlayın)</small></div>';
+    html += debtCalendarHtml();
+
     html += '<div class="stat-grid" style="grid-template-columns:1fr 1fr;">'+
       '<div class="stat-card"><div class="lbl">Toplam Borç</div><div class="val red">'+fmtShort(totalBal)+'</div></div>'+
       '<div class="stat-card"><div class="lbl">Bu Ayki Ödeme</div><div class="val">'+fmtShort(minPay)+'</div></div>'+
@@ -1044,6 +1031,10 @@ if(FIREBASE_CONFIGURED){
     var mi = currentMonth;
     var mt = monthTotals(mi);
     var html = '';
+    
+    html += '<div class="section-title">Ay Seçimi <small style="text-transform:none;font-weight:600;">(aya dokunarak atlayın)</small></div>';
+    html += debtCalendarHtml();
+
     html += '<div class="stat-grid" style="grid-template-columns:1fr 1fr;">'+
       '<div class="stat-card"><div class="lbl">Bu Ayki Toplam Gider</div><div class="val red">'+fmtShort(mt.toplamGider)+'</div></div>'+
       '<div class="stat-card"><div class="lbl">Kalan Net</div><div class="val '+(mt.netKalan>=0?'green':'red')+'">'+fmtShort(mt.netKalan)+'</div></div>'+
@@ -1093,6 +1084,9 @@ if(FIREBASE_CONFIGURED){
     var gt = goldTotals();
     var borsa = borsaSeries();
     var html = '';
+    
+    html += '<div class="section-title">Ay Seçimi <small style="text-transform:none;font-weight:600;">(aya dokunarak atlayın)</small></div>';
+    html += debtCalendarHtml();
 
     html += '<div class="section-title">Altın<span class="amt">'+fmt(gt.toplam)+'</span></div>';
     html += '<div class="card">'+
@@ -1133,6 +1127,9 @@ if(FIREBASE_CONFIGURED){
     var borcNow = currentDebtBalance(mi);
     var netVarlik = netBirikim - borcNow;
     var html = '';
+    
+    html += '<div class="section-title">Ay Seçimi <small style="text-transform:none;font-weight:600;">(aya dokunarak atlayın)</small></div>';
+    html += debtCalendarHtml();
 
     html += '<div class="hero-card '+(netVarlik>=0?'':'warn')+'">'+
       '<div class="label">Net Varlık</div>'+
@@ -1224,13 +1221,6 @@ if(FIREBASE_CONFIGURED){
         render();
       });
     });
-
-    document.getElementById('prevMonth').addEventListener('click', function(){
-      if(currentMonth>0){ currentMonth--; render(); }
-    });
-    document.getElementById('nextMonth').addEventListener('click', function(){
-      if(currentMonth<11){ currentMonth++; render(); }
-    });
   }
 
   function captureFocusState(){
@@ -1279,10 +1269,7 @@ if(FIREBASE_CONFIGURED){
   function render(){
     var tabDef = TABS.filter(function(t){return t.id===currentTab;})[0] || TABS[0];
     document.getElementById('pageTitle').textContent = tabDef.label;
-    document.getElementById('pageSub').textContent = tabDef.sub;
-    document.getElementById('monthLabel').textContent = MONTHS[currentMonth]+' '+MONTH_YEAR[currentMonth];
-    document.getElementById('prevMonth').disabled = currentMonth===0;
-    document.getElementById('nextMonth').disabled = currentMonth===11;
+    document.getElementById('pageSub').textContent = MONTHS[currentMonth] + ' ' + MONTH_YEAR[currentMonth] + ' - ' + tabDef.sub;
 
     Array.prototype.forEach.call(document.querySelectorAll('.tabbtn'), function(btn){
       btn.classList.toggle('active', btn.dataset.tab===currentTab);
@@ -1567,7 +1554,7 @@ if(FIREBASE_CONFIGURED){
       'auth/too-many-requests':'Çok fazla deneme yapıldı, lütfen biraz bekleyin.',
       'auth/network-request-failed':'İnternet bağlantısı sorunu.'
     };
-    return (err && map[err.code]) || ('Bir hata oluştu: ' + ((err && err.message) || 'bilinmeyen hata'));
+    return (err && map[err.code]) yat || ('Bir hata oluştu: ' + ((err && err.message) || 'bilinmeyen hata'));
   }
 
   if(FIREBASE_CONFIGURED && fbAuth && fbDb){
