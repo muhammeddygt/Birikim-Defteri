@@ -1231,53 +1231,49 @@ if(FIREBASE_CONFIGURED){
   }
   function rerender(){ save(); render(); }
 
-  function onChange(e){
+  function handleInput(e){
     var t = e.target;
     var action = t.dataset.action;
     if(!action) return;
-    var blank = String(t.value).trim()==='';
+    var val = t.value;
 
     if(action==='income'){
-      if(blank){ render(); return; }
-      STATE.salaryMonthly[MONTHS[currentMonth]].gelir = parseNum(t.value);
-      rerender(); return;
+      STATE.salaryMonthly[MONTHS[currentMonth]].gelir = parseNum(val);
+      save();
+      return;
     }
     if(action==='name'){
       var list = findList(t.dataset.list);
       var item = list.filter(function(x){return x.id===t.dataset.id;})[0];
-      if(item){ item.ad = t.value; save(); }
+      if(item){ item.ad = val; save(); }
       return;
     }
     if(action==='amt'){
-      if(blank){ render(); return; }
       var list2 = findList(t.dataset.list);
       var item2 = list2.filter(function(x){return x.id===t.dataset.id;})[0];
-      if(item2){ item2.tutar = parseNum(t.value); rerender(); }
+      if(item2){ item2.tutar = parseNum(val); save(); }
       return;
     }
     if(action==='fatura-amt'){
-      if(blank){ render(); return; }
       var f6 = STATE.faturalar.filter(function(x){return x.id===t.dataset.id;})[0];
       var mi6 = parseInt(t.dataset.mi,10);
-      if(f6){ f6.monthlyAmounts[mi6] = parseNum(t.value); rerender(); }
+      if(f6){ f6.monthlyAmounts[mi6] = parseNum(val); save(); }
       return;
     }
     if(action==='offbudget-name' || action==='offbudget-amt'){
-      if(action==='offbudget-amt' && blank){ render(); return; }
       var mi7 = parseInt(t.dataset.mi,10);
       var offList = STATE.offBudgetExpenses[mi7]||[];
       var offItem = offList.filter(function(x){return x.id===t.dataset.id;})[0];
       if(offItem){
-        if(action==='offbudget-name') offItem.ad = t.value; else offItem.tutar = Math.max(0,parseNum(t.value));
-        if(action==='offbudget-amt') rerender(); else save();
+        if(action==='offbudget-name') offItem.ad = val; else offItem.tutar = Math.max(0,parseNum(val));
+        save();
       }
       return;
     }
     if(action==='principal'){
-      if(blank){ render(); return; }
       var pl = findList(t.dataset.list);
       var pi = pl.filter(function(x){return x.id===t.dataset.id;})[0];
-      if(pi){ pi.baslangic = Math.max(0,parseNum(t.value)); rerender(); }
+      if(pi){ pi.baslangic = Math.max(0,parseNum(val)); save(); }
       return;
     }
     if(action==='balance'){
@@ -1286,8 +1282,8 @@ if(FIREBASE_CONFIGURED){
       var bmi = parseInt(t.dataset.mi,10);
       if(bi){
         bi.balanceOverrides = bi.balanceOverrides || {};
-        if(blank) delete bi.balanceOverrides[bmi]; else bi.balanceOverrides[bmi] = Math.max(0,parseNum(t.value));
-        rerender();
+        if(String(val).trim()==='') delete bi.balanceOverrides[bmi]; else bi.balanceOverrides[bmi] = Math.max(0,parseNum(val));
+        save();
       }
       return;
     }
@@ -1296,28 +1292,34 @@ if(FIREBASE_CONFIGURED){
       var pi2 = pl2.filter(function(x){return x.id===t.dataset.id;})[0];
       var pmi = parseInt(t.dataset.mi,10);
       if(pi2){
-        if(blank) delete pi2.payments[pmi]; else pi2.payments[pmi] = parseNum(t.value);
-        rerender();
+        if(String(val).trim()==='') delete pi2.payments[pmi]; else pi2.payments[pmi] = parseNum(val);
+        save();
       }
       return;
     }
     if(action==='kk-rate'){
-      if(blank){ render(); return; }
       var kl = findList(t.dataset.list);
       var ki = kl.filter(function(x){return x.id===t.dataset.id;})[0];
-      if(ki){ ki[t.dataset.field] = Math.max(0,parseNum(t.value)); rerender(); }
+      if(ki){ ki[t.dataset.field] = Math.max(0,parseNum(val)); save(); }
       return;
     }
     if(action==='gold-price'){
-      if(blank){ render(); return; }
-      STATE.gold[t.dataset.field] = Math.max(0,parseNum(t.value));
-      rerender(); return;
+      STATE.gold[t.dataset.field] = Math.max(0,parseNum(val));
+      save();
+      return;
     }
     if(action==='borsa-oran'){
-      if(blank){ render(); return; }
-      STATE.borsaOran[parseInt(t.dataset.i,10)] = parseNum(t.value);
-      rerender(); return;
+      STATE.borsaOran[parseInt(t.dataset.i,10)] = parseNum(val);
+      save();
+      return;
     }
+  }
+
+  function onChange(e){
+    var t = e.target;
+    var action = t.dataset.action;
+    if(!action) return;
+
     if(action==='fatura-to-kk'){
       var cardId = t.value;
       if(!cardId) return;
@@ -1458,13 +1460,7 @@ if(FIREBASE_CONFIGURED){
     }
   }
 
-  document.getElementById('app').addEventListener('input', function(e){
-    var t = e.target;
-    if(t.dataset && (t.dataset.action === 'name' || t.dataset.action === 'amt' || t.dataset.action === 'fatura-amt' || t.dataset.action === 'offbudget-name' || t.dataset.action === 'offbudget-amt' || t.dataset.action === 'pay' || t.dataset.action === 'balance' || t.dataset.action === 'kk-rate' || t.dataset.action === 'gold-price' || t.dataset.action === 'borsa-oran' || t.dataset.action === 'income')){
-      return;
-    }
-  });
-
+  document.getElementById('app').addEventListener('input', handleInput);
   document.getElementById('app').addEventListener('change', onChange);
   document.getElementById('app').addEventListener('click', onClick);
   window.addEventListener('resize', function(){ if(document.getElementById('app').style.display !== 'none'){ buildShell(); render(); } });
