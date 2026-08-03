@@ -744,4 +744,630 @@ input{font-family:inherit;}
     '</div>';
 
     html += '<div class="stat-grid">'+
-      '<div class="stat-card"><div class="icon accent">💰</div><div class="l
+      '<div class="stat-card"><div class="icon accent">💰</div><div class="lbl">Aylık Gelir</div><div class="val">'+fmtShort(mt.gelir)+'</div></div>'+
+      '<div class="stat-card"><div class="icon red">💳</div><div class="lbl">Borç Ödemeleri</div><div class="val red">'+fmtShort(mt.borcOdemeToplam)+'</div></div>'+
+      '<div class="stat-card"><div class="icon amber">🧾</div><div class="lbl">Sabit Giderler</div><div class="val">'+fmtShort(mt.sabitGiderToplam)+'</div></div>'+
+      '<div class="stat-card"><div class="icon violet">⚡</div><div class="lbl">Hesap Dışı</div><div class="val">'+fmtShort(mt.hesapDisiTotal)+'</div></div>'+
+    '</div>';
+
+    html += '<div class="card">'+
+      '<div class="field-inline"><span class="fname">Bu Ayın Geliri</span><input class="num-box" data-action="income" type="text" inputmode="decimal" value="'+editVal(STATE.salaryMonthly[MONTHS[currentMonth]].gelir)+'"></div>'+
+    '</div>';
+
+    var ana = anaBorcStats(currentMonth);
+    var toplamBorcSimdi = currentDebtBalance(currentMonth);
+    html += '<div class="section-title">Ana Borç Durumu <small style="text-transform:none;font-weight:600;">('+MONTHS[currentMonth]+')</small></div>';
+    html += '<div class="stat-grid" style="grid-template-columns:1fr 1fr;">'+
+      '<div class="stat-card"><div class="lbl">'+MONTHS[currentMonth]+' Borcu <span style="font-weight:400;">(ödeme öncesi)</span></div><div class="val">'+fmtShort(ana.start)+'</div></div>'+
+      '<div class="stat-card"><div class="lbl">Kalan Ana Borç <span style="font-weight:400;">(✓ işaretledikçe düşer)</span></div><div class="val red">'+fmtShort(ana.remaining)+'</div></div>'+
+    '</div>';
+    html += '<div class="card">'+
+      '<div class="field-inline"><span class="fname">Genel Toplam Borç<span class="sub">tüm borç ve kredi kartları, güncel bakiye</span></span><span style="font-weight:800;font-family:var(--font-mono);">'+fmt(toplamBorcSimdi)+'</span></div>'+
+    '</div>';
+
+    html += '<div class="section-title">Ödeme Durumu</div>';
+    html += '<div class="card">'+
+      '<div class="field-inline"><span class="fname">Ödenen Borçlar<span class="sub">✓ işaretlediğiniz kalemler</span></span><span style="font-weight:800;color:var(--green);">'+fmt(mt.odenenBorc)+'</span></div>'+
+      '<div class="field-inline"><span class="fname">Kalan Borç Ödemesi</span><span style="font-weight:800;">'+fmt(Math.max(0,mt.borcOdemeToplam-mt.odenenBorc))+'</span></div>'+
+    '</div>';
+
+    var gt = goldTotals();
+    var borsa = borsaSeries();
+    var netBirikim = gt.toplam + borsa[11];
+    html += '<div class="section-title">Birikim Durumu</div>';
+    html += '<div class="stat-grid" style="grid-template-columns:1fr 1fr;">'+
+      '<div class="stat-card"><div class="icon green">📈</div><div class="lbl">Toplam Birikim</div><div class="val green">'+fmtShort(netBirikim)+'</div></div>'+
+      '<div class="stat-card"><div class="icon accent">✨</div><div class="lbl">Net Varlık</div><div class="val">'+fmtShort(netBirikim-toplamBorcSimdi)+'</div></div>'+
+    '</div>';
+
+    html += '<div class="section-title">Genel Borç Tablosu <small style="text-transform:none;font-weight:600;">('+MONTHS[currentMonth]+' sonu)</small><span class="amt">'+fmtShort(toplamBorcSimdi)+'</span></div>';
+    html += '<div class="card">';
+    var anyDebtOzet = false;
+    GROUP_ORDER.forEach(function(turKey){
+      var items = sortedVisibleDebts().filter(function(d){ return d.tur===turKey && currentMonth>=d.startMonthIndex; });
+      if(!items.length) return;
+      anyDebtOzet = true;
+      var groupTotal = 0;
+      html += '<div style="font-size:10px;font-weight:800;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 2px;">'+(GROUP_LABELS[turKey]||turKey)+'</div>';
+      items.forEach(function(d){
+        var bal = calcDebtSeries(d).balances[currentMonth]||0;
+        groupTotal += bal;
+        html += '<div class="field-inline"><span class="fname">'+esc(d.ad)+'</span><span style="display:flex;align-items:center;gap:8px;"><span style="font-weight:800;font-family:var(--font-mono);">'+fmtShort(bal)+'</span><button class="icon-btn danger" data-list="debts" data-id="'+d.id+'" data-action="del" title="Sil">✕</button></span></div>';
+      });
+      html += '<div class="field-inline" style="border-top:1.5px solid var(--card-border);"><span class="fname" style="font-weight:800;color:var(--accent-strong);">'+(GROUP_LABELS[turKey]||turKey)+' Toplamı</span><span style="font-weight:800;font-family:var(--font-mono);color:var(--accent-strong);">'+fmtShort(groupTotal)+'</span></div>';
+    });
+    var ekItemsOzet = sortedVisibleEk().filter(function(d){return currentMonth>=d.startMonthIndex;});
+    if(ekItemsOzet.length){
+      anyDebtOzet = true;
+      var ekTotalOzet = 0;
+      html += '<div style="font-size:10px;font-weight:800;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 2px;">Ek Borçlular</div>';
+      ekItemsOzet.forEach(function(d){
+        var bal = calcEkSeries(d).balances[currentMonth]||0;
+        ekTotalOzet += bal;
+        html += '<div class="field-inline"><span class="fname">'+esc(d.ad)+'</span><span style="display:flex;align-items:center;gap:8px;"><span style="font-weight:800;font-family:var(--font-mono);">'+fmtShort(bal)+'</span><button class="icon-btn danger" data-list="ekBorclular" data-id="'+d.id+'" data-action="del" title="Sil">✕</button></span></div>';
+      });
+      html += '<div class="field-inline" style="border-top:1.5px solid var(--card-border);"><span class="fname" style="font-weight:800;color:var(--accent-strong);">Ek Borçlular Toplamı</span><span style="font-weight:800;font-family:var(--font-mono);color:var(--accent-strong);">'+fmtShort(ekTotalOzet)+'</span></div>';
+    }
+    if(!anyDebtOzet){ html += '<div class="empty-hint">Bu ay için kayıtlı borç yok.</div>'; }
+    html += '</div>';
+    html += '<button class="add-row-btn" data-action="open-add-debt">+ Borç Ekle</button><div id="addDebtSlot"></div>';
+    html += '<button class="add-row-btn" data-action="add-ek">+ Ek Borçlu (Kişi) Ekle</button>';
+    html += hiddenPanelHtml();
+
+    return html;
+  }
+
+  function renderBorclar(){
+    var mi = currentMonth;
+    var totalBal = currentDebtBalance(mi);
+    var minPay = monthTotals(mi).borcOdemeToplam;
+    var html = '';
+    html += '<div class="stat-grid" style="grid-template-columns:1fr 1fr;">'+
+      '<div class="stat-card"><div class="lbl">Toplam Borç</div><div class="val red">'+fmtShort(totalBal)+'</div></div>'+
+      '<div class="stat-card"><div class="lbl">Bu Ayki Ödeme</div><div class="val">'+fmtShort(minPay)+'</div></div>'+
+    '</div>';
+
+    var lastTur = null;
+    var visible = sortedVisibleDebts();
+    if(!visible.length){
+      html += '<div class="empty-hint">Henüz borç eklenmedi.</div>';
+    }
+    visible.forEach(function(d){
+      if(d.tur !== lastTur){
+        lastTur = d.tur;
+        var groupItems = visible.filter(function(x){return x.tur===d.tur && mi>=x.startMonthIndex;});
+        var groupTotal = groupItems.reduce(function(s,x){return s+(calcDebtSeries(x).balances[mi]||0);},0);
+        html += '<div class="section-title">'+(GROUP_LABELS[d.tur]||d.tur)+'<span class="amt">'+fmtShort(groupTotal)+'</span></div>';
+      }
+      html += debtCardHtml(d, mi, 'debts');
+    });
+    html += '<button class="add-row-btn" data-action="open-add-debt">+ Borç Ekle</button><div id="addDebtSlot"></div>';
+
+    var ekTotalNow = sortedVisibleEk().filter(function(d){return mi>=d.startMonthIndex;}).reduce(function(s,d){return s+(calcEkSeries(d).balances[mi]||0);},0);
+    html += '<div class="section-title">Ek Borçlular<span class="amt">'+fmtShort(ekTotalNow)+'</span></div>';
+    var visibleEk = sortedVisibleEk();
+    if(!visibleEk.length){ html += '<div class="empty-hint">Henüz ek borçlu eklenmedi.</div>'; }
+    visibleEk.forEach(function(d){ html += debtCardHtml(d, mi, 'ekBorclular'); });
+    html += '<button class="add-row-btn" data-action="add-ek">+ Kişi Ekle</button>';
+
+    html += hiddenPanelHtml();
+    return html;
+  }
+
+  function renderGiderler(){
+    var mi = currentMonth;
+    var mt = monthTotals(mi);
+    var html = '';
+    html += '<div class="stat-grid" style="grid-template-columns:1fr 1fr;">'+
+      '<div class="stat-card"><div class="lbl">Bu Ayki Toplam Gider</div><div class="val red">'+fmtShort(mt.toplamGider)+'</div></div>'+
+      '<div class="stat-card"><div class="lbl">Kalan Net</div><div class="val '+(mt.netKalan>=0?'green':'red')+'">'+fmtShort(mt.netKalan)+'</div></div>'+
+    '</div>';
+
+    html += '<div class="section-title">Sabit Giderler<span class="amt">'+fmtShort(mt.expTotal)+'</span></div><div class="card">';
+    html += STATE.expenses.map(function(e){
+      return '<div class="field-inline"><input class="name-box" data-list="expenses" data-id="'+e.id+'" data-action="name" value="'+esc(e.ad)+'">'+
+        '<input class="num-box" data-list="expenses" data-id="'+e.id+'" data-action="amt" type="text" inputmode="decimal" value="'+editVal(e.tutar)+'">'+
+        '<button class="icon-btn danger" data-list="expenses" data-id="'+e.id+'" data-action="del">✕</button></div>';
+    }).join('');
+    html += '</div><button class="add-row-btn" data-action="add-simple" data-list="expenses">+ Sabit Gider Ekle</button>';
+
+    var kkCards = STATE.debts.filter(function(d){return d.tur==='kredi_karti';});
+    var kkOptions = '<option value="">Kredi Kartıyla öde…</option>'+kkCards.map(function(c){return '<option value="'+c.id+'">'+esc(c.ad)+'</option>';}).join('');
+    html += '<div class="section-title">Faturalar<span class="amt">'+fmtShort(mt.faturaTotal)+'</span></div><div class="card">';
+    html += STATE.faturalar.map(function(f){
+      var amt = billAmountForMonth(f, mi);
+      var transferred = f.cardTransfers && f.cardTransfers[mi];
+      var kkPicker = (kkCards.length && !transferred) ? '<select class="kk-select" data-action="fatura-to-kk" data-id="'+f.id+'" data-mi="'+mi+'">'+kkOptions+'</select>' : '';
+      var note = transferred ? '<div class="transfer-note">'+fmtShort(transferred.amount)+' → '+MONTHS[transferred.targetMonth]+' / '+(STATE.debts.filter(function(c){return c.id===transferred.cardId;})[0]||{}).ad+' <button class="mini-link-btn" data-action="undo-bill-transfer" data-id="'+f.id+'" data-mi="'+mi+'">geri al</button></div>' : '';
+      return '<div class="field-inline" style="flex-wrap:wrap;">'+
+        '<input class="name-box" data-list="faturalar" data-id="'+f.id+'" data-action="name" value="'+esc(f.ad)+'">'+
+        '<input class="num-box" data-list="faturalar" data-id="'+f.id+'" data-mi="'+mi+'" data-action="fatura-amt" type="text" inputmode="decimal" value="'+editVal(amt)+'"'+(transferred?' disabled':'')+'>'+
+        '<button class="icon-btn danger" data-list="faturalar" data-id="'+f.id+'" data-action="del">✕</button>'+
+        '<div style="width:100%;">'+kkPicker+note+'</div>'+
+      '</div>';
+    }).join('');
+    html += '</div><button class="add-row-btn" data-action="add-fatura">+ Fatura Ekle</button>';
+
+    html += '<div class="section-title">Hesap Dışı Giderler<span class="amt">'+fmtShort(mt.hesapDisiTotal)+'</span></div>';
+    html += '<div class="card">';
+    var offList = STATE.offBudgetExpenses[mi]||[];
+    if(!offList.length){ html += '<div class="empty-hint">Bu ay beklenmedik gider yok.</div>'; }
+    html += offList.map(function(e){
+      return '<div class="field-inline"><input class="name-box" data-list="offbudget" data-id="'+e.id+'" data-mi="'+mi+'" data-action="offbudget-name" value="'+esc(e.ad)+'">'+
+        '<input class="num-box" data-list="offbudget" data-id="'+e.id+'" data-mi="'+mi+'" data-action="offbudget-amt" type="text" inputmode="decimal" value="'+editVal(e.tutar)+'">'+
+        '<button class="icon-btn danger" data-list="offbudget" data-id="'+e.id+'" data-mi="'+mi+'" data-action="del">✕</button></div>';
+    }).join('');
+    html += '</div><button class="add-row-btn" data-action="add-offbudget">+ Gider Ekle</button>';
+
+    return html;
+  }
+
+  function renderBirikim(){
+    var mi = currentMonth;
+    var gt = goldTotals();
+    var borsa = borsaSeries();
+    var html = '';
+
+    html += '<div class="section-title">Altın<span class="amt">'+fmt(gt.toplam)+'</span></div>';
+    html += '<div class="card">'+
+      '<div class="field-inline"><span class="fname">24 Ayar Güncel Gram Fiyatı</span><input class="num-box" data-action="gold-price" data-field="guncelFiyat24" type="text" inputmode="decimal" value="'+editVal(STATE.gold.guncelFiyat24)+'"></div>'+
+      '<div class="field-inline"><span class="fname">22 Ayar Güncel Gram Fiyatı</span><input class="num-box" data-action="gold-price" data-field="guncelFiyat22" type="text" inputmode="decimal" value="'+editVal(STATE.gold.guncelFiyat22)+'"></div>'+
+    '</div>';
+
+    ['ayar24','ayar22'].forEach(function(key){
+      var label = key==='ayar24' ? '24 Ayar' : '22 Ayar';
+      var arr = STATE.gold[key].slice().sort(function(a,b){return a.mi-b.mi;});
+      var totalGram = arr.reduce(function(s,g){return s+g.gram;},0);
+      var totalVal = totalGram * Number(STATE.gold['guncelFiyat'+key.replace('ayar','')]||0);
+      html += '<div class="card"><div class="card-row"><strong>'+label+'</strong><span style="font-weight:800;">'+gramFmt(totalGram)+' g &middot; '+fmtShort(totalVal)+'</span></div>';
+      if(!arr.length){ html += '<div class="empty-hint">Henüz giriş yok.</div>'; }
+      html += arr.map(function(g){
+        return '<div class="field-inline"><span class="fname">'+gramFmt(g.gram)+' g <span class="sub">'+MONTHS[g.mi]+'</span></span>'+
+          '<button class="icon-btn danger" data-list="gold-'+key+'" data-id="'+g.id+'" data-action="del">✕</button></div>';
+      }).join('');
+      html += '</div>';
+    });
+    html += '<button class="add-row-btn" data-action="open-add-gold">+ Altın Ekle</button><div id="addGoldSlot"></div>';
+
+    html += '<div class="section-title">Borsa / Nakit Birikim</div>';
+    html += '<div class="card">'+
+      '<div class="field-inline"><span class="fname">'+MONTHS[mi]+' Getiri Oranı<span class="sub">aylık bileşik</span></span><input class="num-box" data-action="borsa-oran" data-i="'+mi+'" type="text" inputmode="decimal" value="'+editVal(STATE.borsaOran[mi])+'"></div>'+
+      '<div class="field-inline"><span class="fname">'+MONTHS[mi]+' Sonu Birikim</span><span style="font-weight:800;color:var(--green);">'+fmt(borsa[mi])+'</span></div>'+
+      '<div class="field-inline"><span class="fname">Temmuz Sonu (Yıl Sonu) Birikim</span><span style="font-weight:800;">'+fmt(borsa[11])+'</span></div>'+
+    '</div>';
+
+    return html;
+  }
+
+  function renderGenel(){
+    var mi = currentMonth;
+    var gt = goldTotals();
+    var borsa = borsaSeries();
+    var netBirikim = gt.toplam + borsa[11];
+    var borcNow = currentDebtBalance(mi);
+    var netVarlik = netBirikim - borcNow;
+    var html = '';
+
+    html += '<div class="hero-card '+(netVarlik>=0?'':'warn')+'">'+
+      '<div class="label">Net Varlık</div>'+
+      '<div class="value">'+fmt(netVarlik)+'</div>'+
+      '<div class="note">Toplam Birikim − '+MONTHS[mi]+' Borcu</div>'+
+    '</div>';
+
+    html += '<div class="stat-grid" style="grid-template-columns:1fr 1fr;">'+
+      '<div class="stat-card"><div class="icon green">📈</div><div class="lbl">Toplam Birikim</div><div class="val green">'+fmtShort(netBirikim)+'</div></div>'+
+      '<div class="stat-card"><div class="icon red">💳</div><div class="lbl">'+MONTHS[mi]+' Borcu</div><div class="val red">'+fmtShort(borcNow)+'</div></div>'+
+    '</div>';
+
+    html += '<div class="section-title">Borç Dağılımı <small style="text-transform:none;font-weight:600;">('+MONTHS[mi]+' sonu itibarıyla)</small><span class="amt">'+fmtShort(borcNow)+'</span></div>';
+    html += '<div class="card">';
+    var anyDebt = false;
+    GROUP_ORDER.forEach(function(turKey){
+      var items = sortedVisibleDebts().filter(function(d){ return d.tur===turKey && mi>=d.startMonthIndex; });
+      if(!items.length) return;
+      anyDebt = true;
+      var groupTotal = 0;
+      html += '<div style="font-size:10px;font-weight:800;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 2px;">'+(GROUP_LABELS[turKey]||turKey)+'</div>';
+      items.forEach(function(d){
+        var bal = calcDebtSeries(d).balances[mi]||0;
+        groupTotal += bal;
+        html += '<div class="field-inline"><span class="fname">'+esc(d.ad)+'</span><span style="font-weight:800;font-family:var(--font-mono);">'+fmtShort(bal)+'</span></div>';
+      });
+      html += '<div class="field-inline" style="border-top:1.5px solid var(--card-border);"><span class="fname" style="font-weight:800;color:var(--accent-strong);">'+(GROUP_LABELS[turKey]||turKey)+' Toplamı</span><span style="font-weight:800;font-family:var(--font-mono);color:var(--accent-strong);">'+fmtShort(groupTotal)+'</span></div>';
+    });
+    var ekWithDebt = sortedVisibleEk().filter(function(d){return mi>=d.startMonthIndex;});
+    if(ekWithDebt.length){
+      anyDebt = true;
+      var ekTotal = 0;
+      html += '<div style="font-size:10px;font-weight:800;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;margin:10px 0 2px;">Ek Borçlular</div>';
+      ekWithDebt.forEach(function(d){
+        var bal = calcEkSeries(d).balances[mi]||0;
+        ekTotal += bal;
+        html += '<div class="field-inline"><span class="fname">'+esc(d.ad)+'</span><span style="font-weight:800;font-family:var(--font-mono);">'+fmtShort(bal)+'</span></div>';
+      });
+      html += '<div class="field-inline" style="border-top:1.5px solid var(--card-border);"><span class="fname" style="font-weight:800;color:var(--accent-strong);">Ek Borçlular Toplamı</span><span style="font-weight:800;font-family:var(--font-mono);color:var(--accent-strong);">'+fmtShort(ekTotal)+'</span></div>';
+    }
+    if(!anyDebt){ html += '<div class="empty-hint">Bu ay için kayıtlı borç yok.</div>'; }
+    html += '</div>';
+
+    html += '<div class="section-title">Birikim Dağılımı<span class="amt">'+fmtShort(netBirikim)+'</span></div>';
+    html += '<div class="card">'+
+      '<div class="field-inline"><span class="fname">Altın (24+22 Ayar)</span><span style="font-weight:800;font-family:var(--font-mono);">'+fmtShort(gt.toplam)+'</span></div>'+
+      '<div class="field-inline"><span class="fname">Borsa / Nakit Birikim<span class="sub">Temmuz sonu kümülatif</span></span><span style="font-weight:800;font-family:var(--font-mono);">'+fmtShort(borsa[11])+'</span></div>'+
+    '</div>';
+
+    html += '<div class="section-title">Aylık Nakit Akışı <small style="text-transform:none;font-weight:600;">(12 ay, aşağı kaydırın)</small></div>';
+    html += '<div class="stat-grid">';
+    for(var i=0;i<12;i++){
+      var mt = monthTotals(i);
+      html += '<div class="stat-card'+(i===mi?' active-month':'')+'" style="'+(i===mi?'border-color:var(--accent);border-width:2px;':'')+'"><div class="lbl">'+MONTHS[i]+' '+MONTH_YEAR[i]+'</div>'+
+        '<div class="val '+(mt.netKalan>=0?'green':'red')+'">'+fmtShort(mt.netKalan)+'</div>'+
+        '<div style="font-size:10px;color:var(--ink-faint);margin-top:2px;">G '+fmtShort(mt.gelir)+' &middot; Ç '+fmtShort(mt.toplamGider)+'</div></div>';
+    }
+    html += '</div>';
+
+    html += '<div class="section-title">Veri Yönetimi</div>';
+    html += '<div class="backup-row">'+
+      '<button class="btn ghost" data-action="export-data">⇩ Yedek Al (.json)</button>'+
+      '<label class="btn ghost">⇧ Yedekten Geri Yükle<input type="file" accept="application/json,.json" data-action="import-file" style="display:none;"></label>'+
+    '</div>';
+
+    return html;
+  }
+
+  var RENDERERS = {ozet:renderOzet, borclar:renderBorclar, giderler:renderGiderler, birikim:renderBirikim, genel:renderGenel};
+
+  var shellWired = false;
+  function buildShell(){
+    var isDesktop = window.innerWidth >= 900;
+    document.getElementById('sidebar').style.display = isDesktop ? 'flex' : 'none';
+
+    var tabbarHtml = TABS.map(function(t){
+      return '<button type="button" class="tabbtn'+(t.id===currentTab?' active':'')+'" data-tab="'+t.id+'"><span class="ic">'+t.icon+'</span>'+t.label+'</button>';
+    }).join('');
+    document.getElementById('tabbar').innerHTML = tabbarHtml;
+    document.getElementById('sidebarTabs').innerHTML = tabbarHtml;
+
+    if(shellWired) return;
+    shellWired = true;
+
+    document.getElementById('tabbar').addEventListener('click', function(e){
+      var btn = e.target.closest('[data-tab]');
+      if(!btn) return;
+      currentTab = btn.dataset.tab;
+      render();
+    });
+    document.getElementById('sidebarTabs').addEventListener('click', function(e){
+      var btn = e.target.closest('[data-tab]');
+      if(!btn) return;
+      currentTab = btn.dataset.tab;
+      render();
+    });
+  }
+
+  function captureFocusState(){
+    var el = document.activeElement;
+    var page = document.getElementById('tabpage');
+    if(!el || !page.contains(el)) return null;
+    var tag = el.tagName;
+    if(tag !== 'INPUT' && tag !== 'TEXTAREA' && tag !== 'SELECT') return null;
+    if(el.dataset && el.dataset.action){
+      return {
+        mode:'action', action: el.dataset.action, id: el.dataset.id || null,
+        mi: (el.dataset.mi !== undefined) ? el.dataset.mi : null,
+        field: el.dataset.field || null,
+        selStart: (typeof el.selectionStart === 'number') ? el.selectionStart : null,
+        selEnd: (typeof el.selectionEnd === 'number') ? el.selectionEnd : null
+      };
+    }
+    if(el.id){
+      return {
+        mode:'id', elId: el.id,
+        selStart: (typeof el.selectionStart === 'number') ? el.selectionStart : null,
+        selEnd: (typeof el.selectionEnd === 'number') ? el.selectionEnd : null
+      };
+    }
+    return null;
+  }
+  function restoreFocusState(state){
+    if(!state) return;
+    var el;
+    if(state.mode === 'id'){
+      el = document.getElementById(state.elId);
+    } else {
+      var sel = '[data-action="'+state.action+'"]';
+      if(state.id) sel += '[data-id="'+state.id+'"]';
+      if(state.mi !== null) sel += '[data-mi="'+state.mi+'"]';
+      if(state.field) sel += '[data-field="'+state.field+'"]';
+      el = document.getElementById('tabpage').querySelector(sel);
+    }
+    if(!el) return;
+    el.focus();
+    if(state.selStart !== null && typeof el.setSelectionRange === 'function'){
+      try{ el.setSelectionRange(state.selStart, state.selEnd); }catch(err){}
+    }
+  }
+
+  function renderMonthStrip(){
+    var chips = '';
+    for(var i=0;i<12;i++){
+      chips += '<button type="button" class="cal-chip'+(i===currentMonth?' active':'')+'" data-action="jump-month" data-mi="'+i+'">'+
+        '<span class="cal-m">'+MONTHS[i].slice(0,3)+'</span><span class="cal-v">'+MONTH_YEAR[i]+'</span></button>';
+    }
+    return '<div class="cal-strip">'+chips+'</div>';
+  }
+
+  function render(){
+    var tabDef = TABS.filter(function(t){return t.id===currentTab;})[0] || TABS[0];
+    document.getElementById('pageTitle').textContent = tabDef.label;
+    document.getElementById('pageSub').textContent = tabDef.sub;
+    document.getElementById('monthStripHolder').innerHTML = renderMonthStrip();
+
+    Array.prototype.forEach.call(document.querySelectorAll('.tabbtn'), function(btn){
+      btn.classList.toggle('active', btn.dataset.tab===currentTab);
+    });
+
+    var scrollY = window.scrollY;
+    var focusState = captureFocusState();
+    document.getElementById('tabpage').innerHTML = (RENDERERS[currentTab]||renderOzet)();
+    wireOpenForms();
+    window.scrollTo(0, scrollY);
+    restoreFocusState(focusState);
+  }
+  var rerenderTimer = null;
+  function rerender(){
+    save();
+    clearTimeout(rerenderTimer);
+    rerenderTimer = setTimeout(render, 380);
+  }
+  function flushRerender(){
+    if(rerenderTimer){ clearTimeout(rerenderTimer); rerenderTimer = null; render(); }
+  }
+  function scrollActiveChipIntoView(){
+    var activeChip = document.querySelector('#monthStripHolder .cal-chip.active');
+    if(activeChip && activeChip.scrollIntoView){ activeChip.scrollIntoView({behavior:'smooth', inline:'center', block:'nearest'}); }
+  }
+
+  function onChange(e){
+    var t = e.target;
+    var action = t.dataset.action;
+    if(!action) return;
+    var blank = String(t.value).trim()==='';
+
+    if(action==='income'){
+      if(blank){ render(); return; }
+      STATE.salaryMonthly[MONTHS[currentMonth]].gelir = parseNum(t.value);
+      rerender(); return;
+    }
+    if(action==='name'){
+      var list = findList(t.dataset.list);
+      var item = list.filter(function(x){return x.id===t.dataset.id;})[0];
+      if(item){ item.ad = t.value; save(); }
+      return;
+    }
+    if(action==='amt'){
+      if(blank){ render(); return; }
+      var list2 = findList(t.dataset.list);
+      var item2 = list2.filter(function(x){return x.id===t.dataset.id;})[0];
+      if(item2){ item2.tutar = parseNum(t.value); rerender(); }
+      return;
+    }
+    if(action==='fatura-amt'){
+      if(blank){ render(); return; }
+      var f6 = STATE.faturalar.filter(function(x){return x.id===t.dataset.id;})[0];
+      var mi6 = parseInt(t.dataset.mi,10);
+      if(f6){ f6.monthlyAmounts[mi6] = parseNum(t.value); rerender(); }
+      return;
+    }
+    if(action==='offbudget-name' || action==='offbudget-amt'){
+      if(action==='offbudget-amt' && blank){ render(); return; }
+      var mi7 = parseInt(t.dataset.mi,10);
+      var offList = STATE.offBudgetExpenses[mi7]||[];
+      var offItem = offList.filter(function(x){return x.id===t.dataset.id;})[0];
+      if(offItem){
+        if(action==='offbudget-name') offItem.ad = t.value; else offItem.tutar = Math.max(0,parseNum(t.value));
+        if(action==='offbudget-amt') rerender(); else save();
+      }
+      return;
+    }
+    if(action==='principal'){
+      if(blank){ render(); return; }
+      var pl = findList(t.dataset.list);
+      var pi = pl.filter(function(x){return x.id===t.dataset.id;})[0];
+      if(pi){ pi.baslangic = Math.max(0,parseNum(t.value)); rerender(); }
+      return;
+    }
+    if(action==='balance'){
+      var bl = findList(t.dataset.list);
+      var bi = bl.filter(function(x){return x.id===t.dataset.id;})[0];
+      var bmi = parseInt(t.dataset.mi,10);
+      if(bi){
+        bi.balanceOverrides = bi.balanceOverrides || {};
+        if(blank) delete bi.balanceOverrides[bmi]; else bi.balanceOverrides[bmi] = Math.max(0,parseNum(t.value));
+        rerender();
+      }
+      return;
+    }
+    if(action==='pay'){
+      var pl2 = findList(t.dataset.list);
+      var pi2 = pl2.filter(function(x){return x.id===t.dataset.id;})[0];
+      var pmi = parseInt(t.dataset.mi,10);
+      if(pi2){
+        if(blank) delete pi2.payments[pmi]; else pi2.payments[pmi] = parseNum(t.value);
+        rerender();
+      }
+      return;
+    }
+    if(action==='kk-rate'){
+      if(blank){ render(); return; }
+      var kl = findList(t.dataset.list);
+      var ki = kl.filter(function(x){return x.id===t.dataset.id;})[0];
+      if(ki){ ki[t.dataset.field] = Math.max(0,parseNum(t.value)); rerender(); }
+      return;
+    }
+    if(action==='gold-price'){
+      if(blank){ render(); return; }
+      STATE.gold[t.dataset.field] = Math.max(0,parseNum(t.value));
+      rerender(); return;
+    }
+    if(action==='borsa-oran'){
+      if(blank){ render(); return; }
+      STATE.borsaOran[parseInt(t.dataset.i,10)] = parseNum(t.value);
+      rerender(); return;
+    }
+    if(action==='fatura-to-kk'){
+      var cardId = t.value;
+      if(!cardId) return;
+      var mi9 = parseInt(t.dataset.mi,10);
+      var f9 = STATE.faturalar.filter(function(x){return x.id===t.dataset.id;})[0];
+      var card9 = STATE.debts.filter(function(x){return x.id===cardId;})[0];
+      if(!f9||!card9) return;
+      var amt9 = billAmountForMonth(f9,mi9);
+      if(amt9<=0 || mi9>=11){ t.value=''; return; }
+      var cardName = card9.ad;
+      if(!window.confirm('"'+f9.ad+'" faturasının '+fmtShort(amt9)+' tutarı bu ay sıfırlanacak ve '+cardName+' kartının '+MONTHS[mi9+1]+' ayı borcuna eklenecek. Onaylıyor musunuz?')){ t.value=''; return; }
+      f9.cardTransfers = f9.cardTransfers || {};
+      f9.cardTransfers[mi9] = {cardId:cardId, amount:amt9, targetMonth:mi9+1};
+      f9.monthlyAmounts[mi9] = 0;
+      rerender(); return;
+    }
+    if(action==='import-file'){
+      var file = t.files && t.files[0];
+      if(!file) return;
+      var reader = new FileReader();
+      reader.onload = function(ev){
+        try{
+          STATE = normalizeState(JSON.parse(ev.target.result));
+          save(); render();
+          window.alert('Yedek başarıyla geri yüklendi.');
+        }catch(err){ window.alert('Dosya okunamadı. Bu uygulamadan alınmış bir .json yedek dosyası seçin.'); }
+      };
+      reader.readAsText(file);
+      t.value=''; return;
+    }
+  }
+
+  function onClick(e){
+    var t = e.target.closest ? e.target.closest('[data-action]') : null;
+    if(!t) return;
+    var action = t.dataset.action;
+    if(!action) return;
+
+    if(action==='del'){
+      var mi5 = t.dataset.mi!==undefined ? parseInt(t.dataset.mi,10) : null;
+      var list = (t.dataset.list==='offbudget') ? (STATE.offBudgetExpenses[mi5]||[]) :
+                 (t.dataset.list && t.dataset.list.indexOf('gold-')===0) ? STATE.gold[t.dataset.list.replace('gold-','')] :
+                 findList(t.dataset.list);
+      var idx = list.findIndex(function(x){return x.id===t.dataset.id;});
+      if(idx>-1){ list.splice(idx,1); rerender(); flushRerender(); }
+      return;
+    }
+    if(action==='add-simple'){
+      findList(t.dataset.list).push({id:uid(), ad:'Yeni Kalem', tutar:0});
+      rerender(); flushRerender(); return;
+    }
+    if(action==='add-fatura'){
+      STATE.faturalar.push({id:uid(), ad:'Yeni Fatura', monthlyAmounts:new Array(12).fill(0), cardTransfers:{}});
+      rerender(); flushRerender(); return;
+    }
+    if(action==='add-offbudget'){
+      STATE.offBudgetExpenses[currentMonth] = STATE.offBudgetExpenses[currentMonth] || [];
+      STATE.offBudgetExpenses[currentMonth].push({id:uid(), ad:'Yeni Gider', tutar:0});
+      rerender(); flushRerender(); return;
+    }
+    if(action==='add-ek'){
+      STATE.ekBorclular.push({id:uid(), ad:'Yeni Kişi', baslangic:0, startMonthIndex:currentMonth, payments:{}, balanceOverrides:{}, additions:{}, paidMonths:{}, missedMonths:{}, hidden:false, sortOrder:STATE.ekBorclular.length});
+      rerender(); flushRerender(); return;
+    }
+    if(action==='toggle-paid'){
+      var lp = findList(t.dataset.list);
+      var ip = lp.filter(function(x){return x.id===t.dataset.id;})[0];
+      var mip = parseInt(t.dataset.mi,10);
+      if(ip){
+        ip.paidMonths = ip.paidMonths||{}; ip.missedMonths = ip.missedMonths||{};
+        if(ip.paidMonths[mip]) delete ip.paidMonths[mip]; else { ip.paidMonths[mip]=true; delete ip.missedMonths[mip]; }
+        rerender(); flushRerender();
+      }
+      return;
+    }
+    if(action==='toggle-missed'){
+      var lm = findList(t.dataset.list);
+      var im = lm.filter(function(x){return x.id===t.dataset.id;})[0];
+      var mim = parseInt(t.dataset.mi,10);
+      if(im){
+        im.missedMonths = im.missedMonths||{}; im.paidMonths = im.paidMonths||{};
+        if(im.missedMonths[mim]) delete im.missedMonths[mim]; else { im.missedMonths[mim]=true; delete im.paidMonths[mim]; }
+        rerender(); flushRerender();
+      }
+      return;
+    }
+    if(action==='move-up'){ moveItem(t.dataset.list, t.dataset.id, -1); return; }
+    if(action==='move-down'){ moveItem(t.dataset.list, t.dataset.id, 1); return; }
+    if(action==='hide-item'){
+      var lh = findList(t.dataset.list);
+      var ih = lh.filter(function(x){return x.id===t.dataset.id;})[0];
+      if(ih){ ih.hidden = true; rerender(); flushRerender(); }
+      return;
+    }
+    if(action==='show-item'){
+      var ls = findList(t.dataset.list);
+      var is = ls.filter(function(x){return x.id===t.dataset.id;})[0];
+      if(is){ is.hidden = false; rerender(); flushRerender(); }
+      return;
+    }
+    if(action==='undo-bill-transfer'){
+      var fu = STATE.faturalar.filter(function(x){return x.id===t.dataset.id;})[0];
+      var miu = parseInt(t.dataset.mi,10);
+      if(fu && fu.cardTransfers && fu.cardTransfers[miu]){
+        fu.monthlyAmounts[miu] = fu.cardTransfers[miu].amount;
+        delete fu.cardTransfers[miu];
+        rerender(); flushRerender();
+      }
+      return;
+    }
+    if(action==='export-data'){
+      var blob = new Blob([JSON.stringify(STATE, null, 2)], {type:'application/json'});
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'birikim-defteri-yedek-'+(new Date().toISOString().slice(0,10))+'.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function(){URL.revokeObjectURL(url);},1000);
+      return;
+    }
+    if(action==='jump-month'){
+      currentMonth = parseInt(t.dataset.mi,10);
+      render();
+      scrollActiveChipIntoView();
+      return;
+    }
+    if(action==='open-add-debt'){
+      pendingDebtForm = {ad:'', tur:'kredi_karti', startMonth:currentMonth, baslangic:'', asgari:'20', faiz:'5', kmhFaiz:'5', taksit:''};
+      render();
+      return;
+    }
+    if(action==='open-add-gold'){
+      pendingGoldForm = {ayar:'ayar24', gram:'', ay:currentMonth};
+      render();
+      return;
+    }
+  }
+
+  document.getElementById('app').addEventListener('change', onChange);
+  document.getElementById('app').addEventListener('click', onClick);
+  document.getElementById('app').addEventListener('focusout', function(e){
+    if(e.target && e.target.dataset && e.target.dataset.action){ flushRerender(); }
+  });
+  window.addEventListener('resize', function(){ buildShell(); render(); });
+
+  buildShell();
+  render();
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    });
+  }
+})();
+</script>
+</body>
+</html>
