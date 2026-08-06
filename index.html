@@ -188,6 +188,7 @@ input{font-family:inherit;}
   <div class="tabbar" id="tabbar"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 (function(){
   "use strict";
@@ -338,6 +339,45 @@ input{font-family:inherit;}
   }
   function save(){
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }catch(e){}
+    queueSupabaseSync();
+  }
+
+  // ---- Supabase senkronizasyonu ----
+  // SUPABASE_KEY yerine gerçek "publishable" anahtarınızı yapıştırana kadar
+  // senkronizasyon pasif kalır, uygulama sadece localStorage ile çalışmaya devam eder.
+  var SUPABASE_URL = 'https://mrkadmqiqvnptkrugezm.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_B8Y_QB7YUVEgy8O6_Xb9_Q_Hmz4EVE_';
+  var SYNC_ROW_ID = 'default';
+  var sb = (window.supabase && SUPABASE_KEY.indexOf('PASTE_')!==0) ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+  var syncTimer = null, syncInFlight = false, pendingSync = false;
+
+  function queueSupabaseSync(){
+    if(!sb) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(pushToSupabase, 900);
+  }
+  function pushToSupabase(){
+    if(!sb) return;
+    if(syncInFlight){ pendingSync = true; return; }
+    syncInFlight = true;
+    sb.from('app_state').upsert({id:SYNC_ROW_ID, state:STATE, updated_at:new Date().toISOString()}).then(function(res){
+      syncInFlight = false;
+      if(res.error){ console.error('Supabase kayıt hatası:', res.error.message); }
+      if(pendingSync){ pendingSync = false; pushToSupabase(); }
+    });
+  }
+  function pullFromSupabase(){
+    if(!sb) return;
+    sb.from('app_state').select('state').eq('id', SYNC_ROW_ID).maybeSingle().then(function(res){
+      if(res.error){ console.error('Supabase okuma hatası:', res.error.message); return; }
+      if(res.data && res.data.state){
+        STATE = normalizeState(res.data.state);
+        try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE)); }catch(e){}
+        render();
+      } else {
+        pushToSupabase();
+      }
+    });
   }
 
   var STATE = load();
@@ -1358,6 +1398,7 @@ input{font-family:inherit;}
 
   buildShell();
   render();
+  pullFromSupabase();
 
   if('serviceWorker' in navigator){
     window.addEventListener('load', function(){
